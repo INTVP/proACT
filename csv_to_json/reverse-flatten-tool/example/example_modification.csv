@@ -1,0 +1,5 @@
+"persistent_id";"lot_indicator_type";"lot_indicator_value";"lot_indicator_status";"lot_number";"tender_indicators";"lot_updatedprice";"lot_updateddurationdays";"net_amount";"currency"
+KE_000308a71bea345a00673a0ac2ab7c43ca43bf32cf8791dd727d51d4c50c4f96_1;MY_NEW_INDICATOR;77777;CALCULATED;2;;2222;22;;
+KE_000308a71bea345a00673a0ac2ab7c43ca43bf32cf8791dd727d51d4c50c4f96_1;MY_NEW_INDICATOR2;77778;CALCULATED;2;;;;;
+KE_000308a71bea345a00673a0ac2ab7c43ca43bf32cf8791dd727d51d4c50c4f96_1;;;;;[{"type": "MY_NEW_TENDER_INDICATOR", "value": "100", "status": "CALCULATED"}, {"type": "MY_NEW_TENDER_INDICATOR2","value": "1","status": "CALCULATED"}];;;;
+KE_000308a71bea345a00673a0ac2ab7c43ca43bf32cf8791dd727d51d4c50c4f96_1;;;;2;;;;555;KES

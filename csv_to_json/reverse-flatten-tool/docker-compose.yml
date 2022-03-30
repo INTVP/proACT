@@ -1,0 +1,18 @@
+version: '2'
+services:
+  rf-database:
+    image: postgres:9.4-alpine
+    container_name: dw-database
+    networks:
+      - rf-network
+    ports:
+      - 5455:5432
+    environment:
+      - POSTGRES_DB=digiwhist_rf
+      - POSTGRES_PASSWORD=digiwhist
+      - POSTGRES_USER=digiwhist
+      - POSTGRES_SCHEMA= digiwhist_sch
+
+networks:
+  rf-network:
+    driver: bridge

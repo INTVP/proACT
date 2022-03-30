@@ -1,0 +1,38 @@
+Changelog v1.1.4 - 13.11.2020.
+- fixed: some cases duplicated csv processing
+
+
+Changelog v1.1.3 - 06.11.2020.
+- requirements.txt added
+- new system_settings file
+- it is possible to change PostgreSQL port number
+- updated readme
+
+
+Changelog v1.1.2 - 13.10.2020.
+- expanded json handling from csv: the tool can handle not just object array, but string or number array
+
+
+Changelog v1.1.1 - 07.10.2020.
+- handling list of lists (in json from csv file)
+
+
+Changelog v1.1.0 - 29.09.2020.
+- new indicator handling: whole, predefined json structure can be added via "modification csv" file
+- new settings: csv delimiter for input and modification csv (please update your settings.py)
+- new connection_table elements: ['indicators', 'tender_indicators'], ['lots[].indicators', 'lot_indicators']
+- some refactoring
+- updated example
+- updated readme
+
+
+Changelog v1.0.10 - 25.09.2020.
+- it's possible to create multiple array element in the same array with only one csv row
+- reverse_flatten_table is added to connection_table.py
+- new tool for easier modification_table creation
+- updated init_connection_table in connection_table.py
+- one algorithm for both mode in hone.py
+- massively refactored reverse-flatten.py
+- changelog file added
+- removed process_indicators from settings
+- updated readme
