@@ -3,7 +3,6 @@
 
 
 *Data
-use $country_folder/MT_wb_1020.dta, clear
 ********************************************************************************
 
 *Calcluating indicators
@@ -14,6 +13,7 @@ tab corr_decp, m
 tab corr_submp , m
 tab corr_proc, m
 ************************************
+use "${country_folder}/MT_wb_1020.dta", clear
 
 *For indicators with 1 category
 
@@ -56,12 +56,13 @@ replace  ind_tr_`var'_val = 100 if !missing(`var')
 cap drop  impl proc aw_date2 title bids
 
 ********************************************************************************
-save $country_folder/MT_wb_1020.dta,replace
-********************************************************************************
 
+save "${country_folder}/MT_wb_1020.dta", replace
+
+********************************************************************************
 *Exporting for the rev flatten tool
 
-use $country_folder/MT_wb_1020.dta,clear
+use "${country_folder}/MT_wb_1020.dta", clear
 
 drop if missing(tender_publications_lastcontract)
 drop if filter_ok==0
@@ -212,6 +213,7 @@ keep tender_id lot_number bid_number bid_iswinning tender_country tender_awardde
 order tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_contractsignaturedate tender_biddeadline tender_proceduretype tender_supplytype tender_publications_notice_type tender_publications_firstcallfor  notice_url  source tender_publications_award_type  tender_publications_firstdcontra  tender_publications_lastcontract  buyer_masterid buyer_id buyer_city buyer_postcode buyer_country buyer_geocodes buyer_name  buyer_buyertype buyer_mainactivities tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_country bidder_geocodes bidder_name bid_priceUsd bid_price bid_pricecurrency bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name lot_productCode lot_localProductCode_type lot_localProductCode title bids_count tender_estimatedpriceUsd tender_estimatedprice ten_est_pricecurrency ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav2_val ind_taxhav2_type ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type 
 ********************************************************************************
 
-export delimited $country_folder/MT_mod.csv, replace
+export delimited "${country_folder}/MT_mod.csv", replace
+
 ********************************************************************************
 *END
