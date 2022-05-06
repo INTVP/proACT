@@ -17,8 +17,8 @@ import delimited using  "${utility_data}/country/MT/MT_data.csv", encoding(UTF-8
 
 ************************************
 bys persistent_id  tender_id lot_row_nr: gen x=_N
-br persistent_id  tender_id lot_row_nr tender_title lot_title bidder_name bid_price bid_iswinning x if x>1
-*566 observations
+count if x > 1
+assert r(N) == 566 //566 observations, this happens because....?
 
 count if missing(tender_publications_lastcontract) & filter_ok //only 0 obs within filter_ok looks good
 ************************************
@@ -43,11 +43,9 @@ save $country_folder/ppp_data_eu.dta, replace
 use $country_folder/MT_wip.dta,clear
 
 gen year = tender_year
-merge m:1 year using $country_folder/ppp_data_eu.dta
-drop if _m==2
 replace ppp=.684051 if missing(ppp) & year==2020 //used 2019
-drop _m year
 rename ppp ppp_eur
+merge m:1 year using $country_folder/ppp_data_eu.dta, keep(1 3) nogen // removing non-matched observations from using data because...?
 ************************************
 
 gen bid_price_ppp=bid_price
