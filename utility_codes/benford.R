@@ -19,6 +19,7 @@ packages <- c(
   "tidyverse", # general data wrangling
   "benford.analysis", # Benford's analysis
   "foreign", # export dta file
+  "here" # use relative file paths starting on the root folder for the repository
 )  
 
 # THIRD: installing and loading the packages
@@ -30,7 +31,20 @@ p_load(
   character.only = TRUE, 
   depencies = TRUE
 )
+
+# Data -------------------------------------------------------------------------
+# Load the data for analysis
+buyers_proc <- 
   read_csv(
+  # Need to complement this with the path to the output folder starting at the repository root directory
+    here(
+      'buyers_for_R.csv'  
+    ),
+    header = TRUE, 
+    sep = ",",  
+    encoding = "UTF-16LE"
+  )
+
 sprintf("reading in %s", "buyers_for_R.csv")
 # function for calculation
 benford_f <- function(vector_in, output_name) {
@@ -52,5 +66,8 @@ sprintf("exporting %s", "buyers_benford.csv")
 
 write.dta(
   dataframe = buyers_proc_summary,
-  file = "buyers_benford.dta"
+  file = here(
+    # Need to complement this with the path to the output folder starting at the repository root directory
+    "buyers_benford.dta"
+  )
 )# END
