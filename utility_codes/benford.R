@@ -30,6 +30,7 @@ p_load(
   character.only = TRUE, 
   depencies = TRUE
 )
+  read_csv(
 sprintf("reading in %s", "buyers_for_R.csv")
 # function for calculation
 benford_f <- function(vector_in, output_name) {
