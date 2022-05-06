@@ -7,10 +7,10 @@
 ********************************************************************************
 
 *Data 
-********************************************************************************
 
 import delimited using  "${utility_data}/country/MT/MT_data.csv", encoding(UTF-8) clear
 
+********************************************************************************
 * Gen filter_ok, a variable indicating whether the bidder name if available
 
 gen 	filter_ok = !missing(bidder_name)
@@ -22,11 +22,13 @@ assert r(N) == 566 //566 observations, this happens because....?
 
 count if missing(tender_publications_lastcontract) & filter_ok 
 assert r(N) == 0
-************************************
 
+************************************
 *Check tender final price - contract price
+
 sort  tender_id lot_row_nr
 format persistent_id tender_id bidder_name tender_title lot_title %15s
+
 *Estimated:
 *tender_estimatedprice, lot_estimatedprice
 *Actual:
@@ -42,6 +44,7 @@ use "${utility_data}/wb_ppp_data.dta", clear
 
 keep if inlist(countryname,"EU28")
 drop if ppp==.
+
 keep year ppp
 
 save "${country_folder}/ppp_data_eu.dta", replace // it seems inefficient so save this only to merge it later, unless it is also used elsewhere. If it is not, I'd suggest saving it as a tempfile instead.
@@ -50,10 +53,14 @@ save "${country_folder}/ppp_data_eu.dta", replace // it seems inefficient so sav
 use "${country_folder}/MT_wip.dta",clear
 
 gen year = tender_year
-replace ppp=.684051 if missing(ppp) & year==2020 //used 2019
-rename ppp ppp_eur
 
 merge m:1 year using "${country_folder}/ppp_data_eu.dta", keep(1 3) nogen // removing non-matched observations from using data because...?
+
+replace ppp = .684051 if missing(ppp) & year == 2020 // imputing with values from 2019
+rename 	ppp ppp_eur
+
+drop year
+
 ************************************
 
 gen bid_price_ppp=bid_price
@@ -83,51 +90,51 @@ replace curr_ppp = currency if !inlist(currency,"EUR")
 
 *Contract Value
 
-xtile ca_contract_value100 = bid_price_ppp if filter_ok==1, nq(100)
-replace ca_contract_value100=999 if missing(ca_contract_value) & filter_ok==1
-************************************
+gen 	lca_contract_value 		= log(bid_price_ppp)
+xtile 	 ca_contract_value100 	= bid_price_ppp if filter_ok == 1, nq(100)
+replace  ca_contract_value100	= 999 			if missing(ca_contract_value) & filter_ok == 1
 
 *Buyer type
-gen buyer_type = buyer_buyertype
-replace buyer_type="NA" if missing(buyer_type)
-encode buyer_type, gen(anb_type)
-drop buyer_type
-************************************
-
-*Tender year
-************************************
+gen 	buyer_type = buyer_buyertype
+replace buyer_type ="NA" if missing(buyer_type)
+encode 	buyer_type, gen(anb_type)
+drop 	buyer_type
 
 *Contract type
-gen supply_type = tender_supplytype
-replace supply_type="NA" if missing(tender_supplytype)
-encode supply_type, gen(ca_type)
-drop supply_type
-************************************
+gen 	supply_type = tender_supplytype
+replace supply_type = "NA" if missing(tender_supplytype)
+encode 	supply_type, gen(ca_type)
+drop 	supply_type
 
 *Market ids [+ the missing cpv fix]
-replace tender_cpvs = "99100000" if missing(tender_cpvs) & tender_supplytype=="SUPPLIES"
-replace tender_cpvs = "99200000" if missing(tender_cpvs) & tender_supplytype=="SERVICES"
-replace tender_cpvs = "99300000" if missing(tender_cpvs) & tender_supplytype=="WORKS"
+
+replace tender_cpvs = "99100000" if missing(tender_cpvs) & tender_supplytype == "SUPPLIES"
+replace tender_cpvs = "99200000" if missing(tender_cpvs) & tender_supplytype == "SERVICES"
+replace tender_cpvs = "99300000" if missing(tender_cpvs) & tender_supplytype == "WORKS"
 replace tender_cpvs = "99000000" if missing(tender_cpvs) & missing(tender_supplytype)
-gen market_id=substr(tender_cpvs,1,2)
-replace market_id="NA" if missing(tender_cpvs)
-encode market_id,gen(market_id2)
-drop market_id
-rename market_id2 market_id
-************************************
 
+gen 	market_id = substr(tender_cpvs,1,2)
+replace market_id = "NA" if missing(tender_cpvs)
+encode 	market_id, gen(market_id2)
+drop 	market_id
+rename 	market_id2 market_id
+
+************************************
 *Buyer locations
-gen buyer_location = buyer_nuts
-replace buyer_location= "Missing" if missing(buyer_location)
-encode buyer_location,gen(buyer_location2)
-drop buyer_location
-rename buyer_location2 buyer_location
-************************************
 
+gen 	buyer_location = buyer_nuts
+replace buyer_location = "Missing" if missing(buyer_location)
+encode 	buyer_location, gen(buyer_location2)
+drop 	buyer_location
+rename 	buyer_location2 buyer_location
+
+************************************
 *Dates
-gen bid_deadline = date(tender_biddeadline, "YMD")
-gen first_cft_pub = date(tender_publications_firstcallfor, "YMD")
-gen aw_date = date(tender_awarddecisiondate, "YMD") //tender_awarddecisiondate or tender_publications_firstdcontra
+
+gen bid_deadline 	= date(tender_biddeadline, "YMD")
+gen first_cft_pub 	= date(tender_publications_firstcallfor, "YMD")
+gen aw_date 		= date(tender_awarddecisiondate, "YMD") //tender_awarddecisiondate or tender_publications_firstdcontra
+
 format bid_deadline first_cft_pub aw_date %d
 
 ********************************************************************************
