@@ -198,6 +198,7 @@ order tender_id lot_number bid_number bid_iswinning tender_country tender_awardd
 
 ********************************************************************************
 
+isid tender_id lot_number bid_number, sort
 export delimited "${country_folder}/MT_mod.csv", replace
 
 ********************************************************************************
