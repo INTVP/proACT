@@ -1,3 +1,5 @@
+********************************************************************************
+*Data
 
 use "${country_folder}/MT_wip.dta", clear
 
@@ -12,7 +14,6 @@ replace singleb = . if missing(lot_bidscount)
 tab 	singleb, m
 
 ********************************************************************************
-
 *Procedure type
 
 gen 	 ca_procedure = tender_proceduretype
@@ -36,6 +37,9 @@ gen 	 submp = bid_deadline - first_cft_pub
 lab var  submp  "advertisement period"
 replace  submp = . if submp <= 0
 replace  submp = . if submp >  365 //cap ssubmission period to 1 year
+
+sum submp if filter_ok 
+assert floor(r(mean)) == 92  //mean 92 days
 
 xtile   submp10 = submp if filter_ok == 1, nquantiles(10)
 replace submp10 = 99    if submp 	 == .
@@ -65,7 +69,6 @@ replace corr_decp = 1 	if inlist(decp20, 1, 2, 3)
 replace corr_decp = 99 	if decp20 == 99
 
 ********************************************************************************
-
 *No cft
 
 gen 	yescft = 1
