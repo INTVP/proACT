@@ -49,6 +49,8 @@ buyers_proc_summary <- buyers_proc_summary %>%
             MAD = benford_f(vector_in=ca_value,"MAD"))
 
 sprintf("exporting %s", "buyers_benford.csv")
-#readr::write_excel_csv(buyers_proc_summary,"buyers_benford.csv",  na = ".")
-foreign::write.dta(dataframe = buyers_proc_summary,
-                   file = "buyers_benford.dta")# END
+
+write.dta(
+  dataframe = buyers_proc_summary,
+  file = "buyers_benford.dta"
+)# END
