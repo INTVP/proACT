@@ -1,10 +1,10 @@
-# Code to implement benford's law
-## Packages 
-# Load and Install libraries ----
-# The following lines checks if the libraries are install.
-# If installed, then load. If not, then install then then load them.
+# Code to implement benford's law 
+
 print(paste("Using", R.version[13], sep = " "))
 
+# Packages --------------------------------------------------------------------
+
+## Load and Install libraries --------------------------------------------------
 
 # FIRST: check if pacman is installed. 
 # This package installs and loads other packages
@@ -46,21 +46,36 @@ buyers_proc <-
   )
 
 sprintf("reading in %s", "buyers_for_R.csv")
-# function for calculation
-benford_f <- function(vector_in, output_name) {
-  temp <- benford(data = c(vector_in),
-          number.of.digits = 1, sign = "positive", discrete=TRUE, round=3)[[output_name]]
-  return(temp)
-}
 
-buyers_proc_summary <- buyers_proc %>%
+# Function for calculation -----------------------------------------------------
+
+benford_f <- 
+  
+  function(vector_in, output_name) {
+    benford(
+      data = c(vector_in),
+      number.of.digits = 1, 
+      sign = "positive", 
+      discrete = TRUE, 
+      round = 3
+    )[[output_name]]
+  }
+
+# Include session title here ---------------------------------------------------
+
+buyers_proc_summary <- 
+  buyers_proc %>%
   rename(buyer_id = 1) %>%
   rename(ca_value = 2) %>%
-  select(1,2)
-buyers_proc_summary <- buyers_proc_summary %>%
+  select(1, 2)
+
+buyers_proc_summary <- 
+  buyers_proc_summary %>%
   group_by(buyer_id) %>%
-  summarise(MAD_conformitiy = benford_f(vector_in=ca_value,"MAD.conformity"),
-            MAD = benford_f(vector_in=ca_value,"MAD"))
+  summarise(
+    MAD_conformitiy = benford_f(vector_in = ca_value,"MAD.conformity"),
+    MAD = benford_f(vector_in=ca_value,"MAD")
+  )
 
 sprintf("exporting %s", "buyers_benford.csv")
 
