@@ -14,16 +14,11 @@ list.of.packages <- c("pacman", # for loading libraries
 )  # Add libraries as needed here: Please also add the reason why this library is added
 print(paste("Using", R.version[13], sep = " "))
 
-# SECOND: installing and loading the packages
-options(warn=-1) # suppress warnings ON
-for (package in list.of.packages) {
-  if(package %in% rownames(installed.packages()) == FALSE) {
-    #print(paste(package, match(package,list.of.packages), "out of", length(list.of.packages),"is not installed","installing now"))
-    install.packages(package, dependencies = T)
-  }
-  library(package, character.only=TRUE)
-  #print(paste(package, match(package,list.of.packages), "out of", length(list.of.packages),"is installed"))
 
+# FIRST: check if pacman is installed. 
+# This package installs and loads other packages
+if (!require(pacman)) {
+  install.packages("pacman", dependencies = TRUE)
 }
 options(warn=0) # suppress warnings OFF
 # load the data for the analysis
