@@ -49,8 +49,7 @@ save "${country_folder}/MT_wb_1020.dta", replace
 
 use "${country_folder}/MT_wb_1020.dta", clear
 
-drop if missing(tender_publications_lastcontract)
-drop if filter_ok==0
+drop if missing(tender_publications_lastcontract) | filter_ok == 0
 
 bys 	tender_id: gen x=_N
 format 	tender_title bidder_name lot_title  tender_publications_lastcontract  %15s
