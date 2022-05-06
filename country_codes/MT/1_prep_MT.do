@@ -142,6 +142,7 @@ gen aw_date 		= date(tender_awarddecisiondate, "YMD") //tender_awarddecisiondate
 format bid_deadline first_cft_pub aw_date %d
 
 ********************************************************************************
+drop x
 
 save "${country_folder}/MT_wip.dta", replace
 

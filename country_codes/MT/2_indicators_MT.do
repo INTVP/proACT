@@ -186,7 +186,7 @@ save "${country_folder}/MT_wb_1020.dta", replace
 
 ********************************************************************************
 
-do "${utility_codes}/cri.do" singleb corr_proc corr_submp corr_decp nocft taxhav2 w_ycsh4
+do "${utility_codes}/cri.do" singleb corr_proc corr_submp corr_decp nocft taxhav2 //w_ycsh4
 rename cri cri_mt
 
 ********************************************************************************
