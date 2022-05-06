@@ -3,15 +3,6 @@
 # Load and Install libraries ----
 # The following lines checks if the libraries are install.
 # If installed, then load. If not, then install then then load them.
-# FIRST: list all the packages we have:
-list.of.packages <- c("pacman", # for loading libraries
-                      "tidyverse", # general data wrangling
-                      "dplyr", # data wrangling 1: using pipe commands such as "%>%"
-                      "benford.analysis", # Benford's analysis
-                      "readxl", # read EXCEL files
-                      "foreign", # read EXCEL files
-                      "readr" # read CSV and TXT files
-)  # Add libraries as needed here: Please also add the reason why this library is added
 print(paste("Using", R.version[13], sep = " "))
 
 
@@ -20,9 +11,25 @@ print(paste("Using", R.version[13], sep = " "))
 if (!require(pacman)) {
   install.packages("pacman", dependencies = TRUE)
 }
-options(warn=0) # suppress warnings OFF
-# load the data for the analysis
-buyers_proc <- read.csv('buyers_for_R.csv',header = TRUE, sep = ",",  encoding = "UTF-16LE")
+
+# SECOND: list all other packages that will be used
+# Add libraries as needed here.
+# Please also add the reason why this library is added
+packages <- c(
+  "tidyverse", # general data wrangling
+  "benford.analysis", # Benford's analysis
+  "foreign", # export dta file
+)  
+
+# THIRD: installing and loading the packages
+# The following lines checks if the libraries are installed.
+# If installed, they will be loaded.
+# If not, they will be installed then loaded.
+p_load(
+  packages, 
+  character.only = TRUE, 
+  depencies = TRUE
+)
 sprintf("reading in %s", "buyers_for_R.csv")
 # function for calculation
 benford_f <- function(vector_in, output_name) {
