@@ -1,8 +1,8 @@
 
+use "${country_folder}/MT_wip.dta", clear
 
 
 *Data
-use $country_folder/MT_wip.dta, clear
 ********************************************************************************
 
 *Single bidding
@@ -144,10 +144,7 @@ logit singleb i.nocft i.corr_decp i.corr_submp i.corr_proc ca_contract_value100 
 *Tax haven
 tab bidder_country, m
 gen iso = bidder_country
-merge m:1 iso using $utility_data/FSI_wide_200812_fin.dta
 lab var iso "supplier country ISO"
-drop if _merge==2
-drop _merge
 gen sec_score = sec_score2009 if tender_year<=2009
 replace sec_score = sec_score2011 if (tender_year==2010 | tender_year==2011) & sec_score==.
 replace sec_score = sec_score2013 if (tender_year==2012 | tender_year==2013) & sec_score==.
@@ -156,6 +153,7 @@ replace sec_score = sec_score2017 if (tender_year==2016 | tender_year==2017) & s
 replace sec_score = sec_score2019 if (tender_year==2018 | tender_year==2019 | tender_year==2020) & sec_score==.
 lab var sec_score "supplier country Secrecy Score (time varying)"
 sum sec_score
+merge m:1 iso 	using "${utility_data}/FSI_wide_200812_fin.dta", keep(1 3) nogen
 drop sec_score1998-sec_score2019
 tab bidder_country, missing
 
@@ -303,8 +301,8 @@ logit singleb i.taxhav2 i.nocft i.corr_decp i.corr_submp i.corr_proc ca_contract
 reg w_ycsh singleb i.taxhav2 i.nocft i.corr_decp i.corr_submp i.corr_proc ca_contract_value100 i.buyer_location i.anb_type i.ca_type i.tender_year i.market_id  if filter_ok  & w_ynrc>4 & w_ynrc!=., base
 reg proa_ycsh singleb i.taxhav2 i.nocft i.corr_decp i.corr_submp i.corr_proc ca_contract_value100 i.buyer_location i.anb_type i.ca_type i.tender_year i.market_id  if filter_ok  & proa_ynrc>4 & proa_ynrc!=., base
 *Works better: proa_ycsh
+save "${country_folder}/MT_wb_1020.dta", replace
 
-save $country_folder/MT_wb_1020.dta, replace
 ********************************************************************************
 
 *CRI generation
@@ -317,7 +315,7 @@ tab nocft, m
 tab taxhav2, m
 tab w_ycsh, m
 
-do $utility_codes/cri.do singleb corr_proc corr_submp corr_decp nocft taxhav2 w_ycsh4
+do "${utility_codes}/cri.do" singleb corr_proc corr_submp corr_decp nocft taxhav2 w_ycsh4
 rename cri cri_mt
 
 sum cri_mt if filter_ok==1
@@ -325,6 +323,6 @@ hist cri_mt if filter_ok==1, title("CRI MT, filter_ok")
 hist cri_mt if filter_ok==1, by(tender_year, noiy title("CRI MT (by year), filter_ok")) 
 ********************************************************************************
 
-save $country_folder/MT_wb_1020.dta, replace
+save "${country_folder}/MT_wb_1020.dta", replace
 ********************************************************************************
 *END
