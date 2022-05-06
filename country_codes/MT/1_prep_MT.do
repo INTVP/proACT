@@ -20,7 +20,8 @@ bys persistent_id  tender_id lot_row_nr: gen x=_N
 count if x > 1
 assert r(N) == 566 //566 observations, this happens because....?
 
-count if missing(tender_publications_lastcontract) & filter_ok //only 0 obs within filter_ok looks good
+count if missing(tender_publications_lastcontract) & filter_ok 
+assert r(N) == 0
 ************************************
 
 *Check tender final price - contract price
