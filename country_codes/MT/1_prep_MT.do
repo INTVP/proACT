@@ -16,6 +16,8 @@ import delimited using  "${utility_data}/country/MT/MT_data.csv", encoding(UTF-8
 gen 	filter_ok = !missing(bidder_name)
 
 ************************************
+* I do not understand why this is being done
+
 bys persistent_id  tender_id lot_row_nr: gen x=_N
 count if x > 1
 assert r(N) == 566 //566 observations, this happens because....?
@@ -29,6 +31,7 @@ assert r(N) == 0
 sort  tender_id lot_row_nr
 format persistent_id tender_id bidder_name tender_title lot_title %15s
 
+* I do not understand these comments
 *Estimated:
 *tender_estimatedprice, lot_estimatedprice
 *Actual:
@@ -43,8 +46,8 @@ save "${country_folder}/MT_wip.dta", replace
 use "${utility_data}/wb_ppp_data.dta", clear
 
 keep if inlist(countryname,"EU28")
-drop if ppp==.
 
+drop if ppp == . // dropped because ...?
 keep year ppp
 
 save "${country_folder}/ppp_data_eu.dta", replace // it seems inefficient so save this only to merge it later, unless it is also used elsewhere. If it is not, I'd suggest saving it as a tempfile instead.
@@ -106,6 +109,7 @@ replace supply_type = "NA" if missing(tender_supplytype)
 encode 	supply_type, gen(ca_type)
 drop 	supply_type
 
+************************************
 *Market ids [+ the missing cpv fix]
 
 replace tender_cpvs = "99100000" if missing(tender_cpvs) & tender_supplytype == "SUPPLIES"
