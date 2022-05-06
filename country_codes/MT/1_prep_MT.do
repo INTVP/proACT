@@ -7,12 +7,12 @@
 ********************************************************************************
 
 *Data 
-import delimited using  $utility_data/country/AT/starting_data/MT_data.csv, encoding(UTF-8) clear
 ********************************************************************************
 
 *Gen filter_ok
 gen filter_ok=0
 replace filter_ok =1 if !missing(bidder_name)
+import delimited using  "${utility_data}/country/MT/MT_data.csv", encoding(UTF-8) clear
 
 tab filter_ok, m
 
