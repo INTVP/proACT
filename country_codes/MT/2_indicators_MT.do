@@ -75,7 +75,7 @@ gen 	yescft = 1
 replace yescft = 0 if submp <= 0 | submp == .
 
 gen 	nocft  = (yescft - 1) * -1
-replace nocft  =. if yescft == .
+replace nocft  = . if yescft == .
 
 ********************************************************************************
 *Tax haven
