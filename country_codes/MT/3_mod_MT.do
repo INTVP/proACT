@@ -199,7 +199,10 @@ order tender_id lot_number bid_number bid_iswinning tender_country tender_awardd
 ********************************************************************************
 
 isid tender_id lot_number bid_number, sort
-export delimited "${country_folder}/MT_mod.csv", replace
+export delimited  "${country_folder}/MT_mod.csv", replace
+
+cfout _all  using "${country_folder}/MT_mod.dta", id (tender_id lot_number bid_number) saving("${country_folder}/list_of_diffs.csv", variable(varname) csv replace)
+save 			 "${country_folder}/MT_mod.dta", replace
 
 ********************************************************************************
 *END
