@@ -31,21 +31,28 @@ format persistent_id tender_id bidder_name tender_title lot_title %15s
 *Actual:
 *tender_finalprice, bid_price
 *Fix currency
-save $country_folder/MT_wip.dta, replace
+
+save "${country_folder}/MT_wip.dta", replace
+
 ********************************************************************************
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
-use $utility_data/wb_ppp_data.dta, clear
+
+use "${utility_data}/wb_ppp_data.dta", clear
+
 keep if inlist(countryname,"EU28")
 drop if ppp==.
 keep year ppp
-save $country_folder/ppp_data_eu.dta, replace
+
+save "${country_folder}/ppp_data_eu.dta", replace // it seems inefficient so save this only to merge it later, unless it is also used elsewhere. If it is not, I'd suggest saving it as a tempfile instead.
+
 ********************************************************************************
-use $country_folder/MT_wip.dta,clear
+use "${country_folder}/MT_wip.dta",clear
 
 gen year = tender_year
 replace ppp=.684051 if missing(ppp) & year==2020 //used 2019
 rename ppp ppp_eur
-merge m:1 year using $country_folder/ppp_data_eu.dta, keep(1 3) nogen // removing non-matched observations from using data because...?
+
+merge m:1 year using "${country_folder}/ppp_data_eu.dta", keep(1 3) nogen // removing non-matched observations from using data because...?
 ************************************
 
 gen bid_price_ppp=bid_price
@@ -121,8 +128,10 @@ gen bid_deadline = date(tender_biddeadline, "YMD")
 gen first_cft_pub = date(tender_publications_firstcallfor, "YMD")
 gen aw_date = date(tender_awarddecisiondate, "YMD") //tender_awarddecisiondate or tender_publications_firstdcontra
 format bid_deadline first_cft_pub aw_date %d
+
 ********************************************************************************
 
-save $country_folder/MT_wip.dta , replace
+save "${country_folder}/MT_wip.dta", replace
+
 ********************************************************************************
 *END
