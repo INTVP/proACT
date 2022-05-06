@@ -3,22 +3,11 @@
 
 
 *Data
-********************************************************************************
-
-*Calcluating indicators
-tab nocft , m
-tab singleb , m 
-tab taxhav2 , m
-tab corr_decp, m
-tab corr_submp , m
-tab corr_proc, m
-************************************
 use "${country_folder}/MT_wb_1020.dta", clear
 
 *For indicators with 1 category
 
 foreach var of varlist nocft singleb taxhav2 corr_submp corr_decp corr_proc {
-tab `var', m
 gen ind_`var'_val = 0 
 replace ind_`var'_val = 0 if `var'==1
 replace ind_`var'_val = 100 if `var'==0
@@ -27,10 +16,6 @@ replace ind_`var'_val = .  if  `var'==9  //tax haven undefined
 }
 gen ind_corr_ben_val = . 
 
-tab ind_nocft_val  nocft, m
-tab ind_singleb_val  singleb, m
-tab ind_taxhav2_val  taxhav2, m
-tab ind_corr_submp_val  corr_submp, m
 ************************************
 
 *Contract Share
@@ -42,7 +27,6 @@ replace ind_csh_val = 100-ind_csh_val
 ************************************
  
 *Transparency
-br tender_addressofimplementation_n tender_nationalproceduretype tender_publications_firstdcontra
 gen title =lot_title
 replace title = tender_title if missing(title)
 gen impl= tender_addressofimplementation_n
@@ -69,20 +53,15 @@ drop if filter_ok==0
 
 bys tender_id: gen x=_N
 format tender_title bidder_name lot_title  tender_publications_lastcontract  %15s
-br x tender_id tender_lotscount lot_row_nr bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price *cons* tender_publications_lastcontract if x>5
 ************************************
 
 *RULE: use tender_lotscount, if tender_lotscount==1 then lot_number is 1 for all obs with the same tender_id; if tender_lotscount>1 then we count rows as seperate lots
-count if missing(tender_lotscount)
 bys tender_id: gen lot_number = _n if tender_lotscount>1
 replace lot_number = 1 if missing(lot_number) & tender_lotscount==1
-br x tender_id tender_lotscount lot_row_nr lot_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1
-count if missing(lot_number)
 ************************************
 
 *Bid number: Rule;
 bys tender_id lot_number: gen bid_number=_n
-br x tender_id tender_lotscount lot_row_nr lot_number bid_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1 & tender_lotscount==1
 ************************************
 
 gen tender_country = "MT"
@@ -117,7 +96,6 @@ replace impl_nuts = "MT000" if impl_nuts=="MT"
 replace impl_nuts = "MT000" if impl_nuts=="MT0"
 replace impl_nuts = "MT000" if impl_nuts=="MT00"
 replace impl_nuts = "TR000" if impl_nuts=="TR"
-tab impl_nuts, m
 gen tender_addressofimplementation_c = substr(impl_nuts,1,2) 
 gen  tender_addressofimplementation2 = "["+ `"""' + impl_nuts + `"""' +"]"
 drop tender_addressofimplementation_n
@@ -125,8 +103,6 @@ rename tender_addressofimplementation2 tender_addressofimplementation_n
 
 
 gen bidder_nuts_len = length(bidder_nuts)
-tab bidder_nuts_len, m
-tab bidder_nuts  if  bidder_nuts_len==2
 gen bidder_geocodes =  bidder_nuts
 *Fix Greece 
 replace bidder_geocodes = subinstr(bidder_geocodes,"GR","EL",.)
@@ -163,12 +139,10 @@ gen lot_localProductCode =  lot_productCode
 gen lot_localProductCode_type = "CPV2008" if !missing(lot_localProductCode)
 ************************************
 
-br tender_title lot_title
 gen title = lot_title
 replace title = tender_title if missing(title)
 ************************************
 
-br tender_recordedbidscount lot_bidscount
 gen bids_count = lot_bidscount
 replace bids_count = tender_recordedbidscount if missing(bids_count)
 ************************************
