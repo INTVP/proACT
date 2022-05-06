@@ -1,17 +1,6 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
-********************************************************************************
-/*This script performs several post processing operations to prepare the data for
-the reverse flatten tool.
-1) Creates Transparency indicators from risk indicators
-2) Tidy variables for reverse flatten tool
-3) Exports select variable for the reverse flatten tool*/
-********************************************************************************
+
+
+
 
 *Data
 use $country_folder/MT_wb_1020.dta, clear

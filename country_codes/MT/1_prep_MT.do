@@ -1,10 +1,3 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis

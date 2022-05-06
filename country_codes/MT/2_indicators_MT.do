@@ -1,13 +1,5 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
-********************************************************************************
-/*This script runs the risk indicator models to identify risk thresholds.*/
-********************************************************************************
+
+
 
 *Data
 use $country_folder/MT_wip.dta, clear
