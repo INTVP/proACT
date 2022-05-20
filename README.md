@@ -2,10 +2,18 @@
 
 This repository outlines the data pipeline for producing the datasets for the [ProACT Procurement Anticorruption and Transparency platform](https://www.procurementintegrity.org/) from publicly available public procurement datasets of the Government Transparency Institute (GTI).
 
-The project was implemented late 2020 from funding of the World Bank. This documentation allows the user to replicate the data behind the ProACT platform from the source dataset.
+The project was implemented late 2020 with funding from the World Bank. This documentation allows the user to replicate the data behind the ProACT platform from the source dataset.
 
 Below you can find instructions on navigating the repository and brief
 explanations on the main functions of the scripts used.
+
+## Replication
+* To replicate a country dataset:
+> 1. After cloning this repository, request the input data from GTI by writing to info@govtransparency.eu
+GTI will send country.zip to replace [ProACT-2020/utility_data/country/](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_data/country)
+> 2. Launch Stata using [main.do](https://github.com/GovTransparencyInstitue/ProACT-2020/blob/main/main.do) from the root directory.
+> 3. [main.do](https://github.com/GovTransparencyInstitue/ProACT-2020/blob/main/main.do) takes two inputs: country list to execute the code and  R_path_local. R_path_local is the path of Rscript.exe on your  machine.
+> 4. Execute main.do
 
 ## Data Navigation
 This section describes the different datasets used to create the main output files.
@@ -41,11 +49,11 @@ The scripts in this folder are shared by all the country specific scripts.
 * [transliteration_cleaning](/utility_codes/transliteration_cleaning.do) : transliterates non-latin characters into latin.
 
 2. [Country Specific codes](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/country_codes)
-The scripts in this folder are the main scripts used to generate the output data. They are to be run in the same alphanumeric order used as the naming convention. There are four types of codes: a) Pre-processing scripts b) Preparation scripts c) Indicator calculation scripts d) MOD scripts
+The scripts in this folder are the main scripts used to generate the output data. There are four types of codes: a) Pre-processing scripts b) Preparation scripts c) Indicator calculation scripts d) MOD scripts
 
 a) **Pre-processing scripts**
 
-These scripts are used in certain of countries to enhance the dataset such as improving the product classification variables and/or the location variables. They are generally named as *0_X_variable_operation_country.do/R* - where *X* refers to the order used to run the pre-processing scripts (A/B/C/D).
+These scripts are used in certain countries to enhance the dataset such as improving the product classification variables and/or the location variables. They are generally named as *0_X_variable_operation_country.do/R*.
 
 The main operations performed by these scripts are:
 
@@ -73,6 +81,8 @@ Tax haven ( [The Foreign Secrecy Index](https://fsi.taxjustice.net/en/) from the
 Public organization and supplier dependency risks, Benford’s law based risk indicator, Delay & Cost Overrun.
 
 The CRI is a standardized risk indicator, that is the average of the elementary indicators, between 0-1 (continuous). Missing values of the elementary indicators are coded as 99 to limit the estimation sample size reduction due to missing values. Missing values by themselves can be a risk category.
+
+You can read more detailes about the CRI methodology [here](https://link.springer.com/article/10.1007/s10610-016-9308-z) 
 
 d) **MOD scripts**
 

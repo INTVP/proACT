@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis
@@ -12,63 +6,70 @@ macro list
 4) Structures/prepares other control variables used for risk regressions
 */
 ********************************************************************************
+*Data Import
 
-*Data 
-import delimited using  $utility_data/country/AT/starting_data/MT_data.csv, encoding(UTF-8) clear
+import delimited using  "${utility_data}/country/`country'/starting_data/`country'_data.csv", encoding(UTF-8) clear
 ********************************************************************************
-
-*Gen filter_ok
+*Generate filter_ok
 gen filter_ok=0
 replace filter_ok =1 if !missing(bidder_name)
 
-tab filter_ok, m
-
-tab opentender, m
-tab bid_iswinning, m
-tab bid_iswinning if filter_ok, m
+// tab filter_ok, m
+// tab opentender, m
+// tab bid_iswinning, m
+// tab bid_iswinning if filter_ok, m
 ************************************
-unique persistent_id tender_id lot_row_nr if filter_ok
-bys persistent_id  tender_id lot_row_nr: gen x=_N
-br persistent_id  tender_id lot_row_nr tender_title lot_title bidder_name bid_price bid_iswinning x if x>1
-*566 observations
+*Checks the data structure
 
-count if missing(tender_publications_lastcontract) & filter_ok //only 0 obs within filter_ok looks good
+// unique persistent_id tender_id lot_row_nr if filter_ok
+// bys persistent_id  tender_id lot_row_nr: gen x=_N
+// br persistent_id  tender_id lot_row_nr tender_title lot_title bidder_name bid_price bid_iswinning x if x>1
+// count if missing(tender_publications_lastcontract) & filter_ok //only 0 obs within filter_ok looks good
 ************************************
-
 *Check tender final price - contract price
-sort  tender_id lot_row_nr
-format persistent_id tender_id bidder_name tender_title lot_title %15s
-br persistent* tender_id lot_row_nr tender_title lot_title bidder_name *price* if filter_ok
-*Estimated:
-*tender_estimatedprice, lot_estimatedprice
-*Actual:
-*tender_finalprice, bid_price
-*Fix currency
-tab curr if filter_ok, m
-tab source if missing(currency) //missing source is ted so we assume its EUR
-save $country_folder/MT_wip.dta, replace
+
+// sort  tender_id lot_row_nr
+// format persistent_id tender_id bidder_name tender_title lot_title %15s
+// br persistent* tender_id lot_row_nr tender_title lot_title bidder_name *price* if filter_ok
+
+*Check currency
+// tab curr if filter_ok, m
+// tab source if missing(currency) //missing source is ted so we assume its EUR
+
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
-use $utility_data/wb_ppp_data.dta, clear
+
+use "${utility_data}/wb_ppp_data.dta", clear
 keep if inlist(countryname,"EU28")
 drop if ppp==.
 keep year ppp
-save $country_folder/ppp_data_eu.dta, replace
+save "${country_folder}/ppp_data_eu.dta", replace
 ********************************************************************************
-use $country_folder/MT_wip.dta,clear
+*Re-load wip dataset to merge ppp values
+use "${country_folder}/`country'_wip.dta",clear
 
 gen year = tender_year
-merge m:1 year using $country_folder/ppp_data_eu.dta
-drop if _m==2
-tab year if _m==1, m //2020 no ppp data
-tabstat ppp, by(year)
+merge m:1 year using "${country_folder}/ppp_data_eu.dta"
+
+*Dropping unmatched ppp years from the using datset
+drop if _m==2 
+// tab year if _m==1, m //2020 no ppp data
+// tabstat ppp, by(year)
+
+*Replacing the ppp data for 2020 manually - using 2019 ppp value 
 replace ppp=.684051 if missing(ppp) & year==2020 //used 2019
-br year ppp if _m==3
+// br year ppp if _m==3
+
 drop _m year
 rename ppp ppp_eur
 ************************************
-br tender_finalprice  bid_price tender_estimatedprice lot_estimatedprice  currency
-tab currency, m
+*Transform price information using merged ppp values
+
+// br tender_finalprice  bid_price tender_estimatedprice lot_estimatedprice  currency
+// tab currency, m
+
+*Assuming price information is in EUR if missing currency information and souce is "http://data.europa.eu/" or "http://ted.europa.eu"
 
 gen bid_price_ppp=bid_price
 replace bid_price_ppp = bid_price/ppp_eur if currency=="EUR"
@@ -89,47 +90,47 @@ replace lot_estimatedprice_ppp = lot_estimatedprice/ppp_eur if inlist(source,"ht
 gen curr_ppp = ""
 replace curr_ppp = "International Dollars" if !missing(bid_price_ppp) | !missing(tender_finalprice_ppp) | !missing(tender_estimatedprice_ppp) | !missing(lot_estimatedprice_ppp)
 replace curr_ppp = currency if !inlist(currency,"EUR")
-tab curr_ppp if filter_ok, m
+*tab curr_ppp if filter_ok, m
 
 ********************************************************************************
-*Preparing Controls 
+*Preparing regression controls
 *contract value, buyer type, tender year, market id, contract supply type
 ************************************
-
 *Contract Value
-hist bid_price_ppp if filter_ok
-hist bid_price_ppp if filter_ok & bid_price_ppp<1000000
-hist bid_price_ppp if filter_ok & bid_price_ppp>1000000 & !missing(bid_price_ppp)
+
+// hist bid_price_ppp if filter_ok
+// hist bid_price_ppp if filter_ok & bid_price_ppp<1000000
+// hist bid_price_ppp if filter_ok & bid_price_ppp>1000000 & !missing(bid_price_ppp)
 gen lca_contract_value = log(bid_price_ppp)
-hist lca_contract_value if filter_ok
+// hist lca_contract_value if filter_ok
 
 xtile ca_contract_value100 = bid_price_ppp if filter_ok==1, nq(100)
 replace ca_contract_value100=999 if missing(ca_contract_value) & filter_ok==1
 ************************************
-
 *Buyer type
-tab buyer_buyertype, m
+
+// tab buyer_buyertype, m
 gen buyer_type = buyer_buyertype
 replace buyer_type="NA" if missing(buyer_type)
 encode buyer_type, gen(anb_type)
 drop buyer_type
-tab anb_type, m
+// tab anb_type, m
 ************************************
-
 *Tender year
-tab tender_year, m
-************************************
 
+// tab tender_year, m
+************************************
 *Contract type
-tab tender_supplytype, m
+
+// tab tender_supplytype, m
 gen supply_type = tender_supplytype
 replace supply_type="NA" if missing(tender_supplytype)
 encode supply_type, gen(ca_type)
 drop supply_type
-tab ca_type, m
+// tab ca_type, m
 ************************************
+*Generating encoded Market ids based on CPV sectors [+ the missing cpv fix]
 
-*Market ids [+ the missing cpv fix]
 replace tender_cpvs = "99100000" if missing(tender_cpvs) & tender_supplytype=="SUPPLIES"
 replace tender_cpvs = "99200000" if missing(tender_cpvs) & tender_supplytype=="SERVICES"
 replace tender_cpvs = "99300000" if missing(tender_cpvs) & tender_supplytype=="WORKS"
@@ -139,27 +140,27 @@ replace market_id="NA" if missing(tender_cpvs)
 encode market_id,gen(market_id2)
 drop market_id
 rename market_id2 market_id
-tab market_id, m
+// tab market_id, m
 ************************************
-
 *Buyer locations
-tab buyer_nuts, m
+
+// tab buyer_nuts, m
 gen buyer_location = buyer_nuts
 replace buyer_location= "Missing" if missing(buyer_location)
 encode buyer_location,gen(buyer_location2)
 drop buyer_location
 rename buyer_location2 buyer_location
-tab buyer_location, m
+// tab buyer_location, m
 ************************************
-
 *Dates
-br *publi* *dead* *date*
+
+// br *publi* *dead* *date*
 gen bid_deadline = date(tender_biddeadline, "YMD")
 gen first_cft_pub = date(tender_publications_firstcallfor, "YMD")
-gen aw_date = date(tender_awarddecisiondate, "YMD") //tender_awarddecisiondate or tender_publications_firstdcontra
-format bid_deadline first_cft_pub aw_date %d
+gen aw_date = date(tender_awarddecisiondate, "YMD") 
+*format bid_deadline first_cft_pub aw_date %d
 ********************************************************************************
 
-save $country_folder/MT_wip.dta , replace
+save "${country_folder}/`country'_wip.dta" , replace
 ********************************************************************************
 *END

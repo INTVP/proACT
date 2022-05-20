@@ -38,3 +38,6 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 GTI-Data-Pipeline.Rproj
+
+# Stata dta files
+.dta

@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis
@@ -14,7 +8,7 @@ macro list
 ********************************************************************************
 
 *Data 
-use $country_folder/PY_wip.dta, replace
+use "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 
 *Dropping Missing variables
@@ -127,12 +121,11 @@ lab var anb_contactname "Announcing body contact name"
 rename buyer_contactpoint anb_contactpoint
 lab var anb_contactpoint "Announcing body contact point"
 
-rename buyer_city anb_city
-lab var anb_city "Announcing body town"
-*8 obs
+// rename buyer_city anb_city
+// lab var anb_city "Announcing body town"
 
-rename buyer_country anb_country
-lab var anb_country "Announcing body country"
+// rename buyer_country anb_country
+// lab var anb_country "Announcing body country"
 *4 obs
 
 rename buyer_postcode anb_postcode
@@ -201,19 +194,17 @@ rename lot_description_length ca_lot_description_length
 rename tender_digiwhist_price tender_price_dw
 rename bid_digiwhist_price contract_price_dw
 ********************************************************************************
-
 *Filter_ok
+
 * filtering out irrelevant/unreliable observations
 
-tab filter_ok
-drop filter_ok
+cap drop filter_ok
 gen filter_ok=1
 replace filter_ok=0 if missing(w_name) | bid_iswinning=="f" | bid_iswinning==""
-tab filter_ok
-tab year, missing, if filter_ok==1  
+// tab filter_ok
+// tab year, missing, if filter_ok==1  
 
 gen filter_drop=!missing(w_name) //*Data includes losing bidders - create a new filter for data export
-
 *****************************
 
 encode anb_masterid, gen(anb_masterid_n)
@@ -231,7 +222,6 @@ encode w_country, gen(w_country_n)
 drop w_country
 rename w_country_n w_country
 ********************************************************************************
-
 *Buyer type
 
 * generate missing buyer type from buyer name
@@ -278,55 +268,59 @@ replace anb_type=10 if anb_type==.
 label define anb_type 1 "Federal Government" 2 "Federal Body" 3 "State Government" 4 "Municipal Government" 5 "University" 6 "Hospital" 7 "Justice" 8 "National Funds and Banks" 9 "Other" 10"missing"
 label var anb_type "Announcing body type"
 label values anb_type anb_type 
-tab anb_type, missing
+// tab anb_type, missing
 *got 79% of buyers categorised
-tab anb_type if filter_ok==1
+// tab anb_type if filter_ok==1
 drop anb_name2
 ********************************************************************************
-
 *Contract value variables
-br *value*
+
+// br *value*
+*Names of variables in this dataset
 *Estimated: ca_tender_est_value_inlots
 *Tender value: ca_tender_value
 *Contract value: ca_contract_value- lot_updatedprice
 
 sort tender_id ca_lotscount
 format ca_lot_title %12s
-br tender_id ca_lotscount ca_recordedbidscount bid_iswinning ca_lot_title ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots
+// br tender_id ca_lotscount ca_recordedbidscount bid_iswinning ca_lot_title ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots
 *ca_contract_value is the main price variable
 
-tab currency, m
-tab source, m
-tab currency if source=="http://ted.europa.eu", m
-tab bid_iswinning if source=="http://ted.europa.eu", m //one tender from ted dropped
-tab tender_id if source=="http://ted.europa.eu", m //one winning tender from ted dropped
+// tab currency, m
+// tab source, m
+// tab currency if source=="http://ted.europa.eu", m
+// tab bid_iswinning if source=="http://ted.europa.eu", m //one tender from ted dropped
+// tab tender_id if source=="http://ted.europa.eu", m //one winning tender from ted dropped
 drop if source=="http://ted.europa.eu"
 *Assuming all currency is Local 
 ********************************************************************************
-save $country_folder/PY_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
-use $utility_data/wb_ppp_data.dta, clear
+use "${utility_data}/wb_ppp_data.dta", clear
 keep if inlist(countryname,"Paraguay")
 drop if ppp==.
 keep year ppp
-save $country_folder/ppp_data_py.dta
+save "${country_folder}/ppp_data_py.dta", replace
 ********************************************************************************
-use $country_folder/PY_wip.dta, clear
-*Fixing the year variable
-tab year if filter_ok, m //all good
+*Merging ppp data to the main dataset
 
-merge m:1 year using $country_folder/ppp_data_py.dta
+use "${country_folder}/`country'_wip.dta", clear
+
+merge m:1 year using "${country_folder}/ppp_data_py.dta"
 drop if _m==2
-tab year if _m==1, m //2020 no ppp data
-tabstat ppp, by(year)
+
+// tab year if _m==1, m //2020 no ppp data
+// tabstat ppp, by(year)
+
+*Using ppp2019 for 2020 as data was missing on collection
 replace ppp=2558.022 if missing(ppp) & year==2020 //used 2019
-br year ppp if _m==3
+// br year ppp if _m==3
 drop  _m
 rename ppp ppp_pyg
 *****************************
-br ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots currency
-tab currency, m
+// br ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots currency
+// tab currency, m
 *Local source assume PYG
 
 foreach var of varlist ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots{
@@ -339,43 +333,43 @@ count if missing(ca_contract_value_ppp) & filter_ok //OK!
 gen curr_ppp = ""
 replace curr_ppp = "International Dollars" if !missing(ca_contract_value_ppp) | !missing(lot_updatedprice_ppp) | !missing(ca_tender_value_ppp) | !missing(ca_tender_est_value_inlots_ppp)
 
-br ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots currency ca_contract_value_ppp lot_updatedprice_ppp ca_tender_value_ppp ca_tender_est_value_inlots_ppp curr_ppp
+// br ca_contract_value lot_updatedprice ca_tender_value ca_tender_est_value_inlots currency ca_contract_value_ppp lot_updatedprice_ppp ca_tender_value_ppp ca_tender_est_value_inlots_ppp curr_ppp
 ********************************************************************************
-
 *Contract Value
-hist ca_contract_value_ppp if filter_ok
+
+// hist ca_contract_value_ppp if filter_ok
 gen lca_contract_value = log(ca_contract_value_ppp)
-hist lca_contract_value if filter_ok
+// hist lca_contract_value if filter_ok
 xtile ca_contract_value10 = ca_contract_value_ppp if filter_ok, nq(10)
 replace ca_contract_value10 = 99 if missing(ca_contract_value_ppp)
-tab ca_contract_value10 if filter_ok, m
+// tab ca_contract_value10 if filter_ok, m
 
-tabstat ca_contract_value_ppp if filter_ok, m by(ca_contract_value10) stat(min max n)
+// tabstat ca_contract_value_ppp if filter_ok, m by(ca_contract_value10) stat(min max n)
 ************************************
-
 *CPV and Market ids
-br cpv_div tender_unspsc_original
+
+// br cpv_div tender_unspsc_original
 *UNSPSC codes were transformed to cpv-divisions(2 char)
 *cpv_div - transform to fill code using zeros
 
-tab cpv_div, m
+// tab cpv_div, m
 
 replace cpv_div="99" if missing(cpv_div)
-br cpv_div tender_unspsc_original if cpv_div=="99" //some of the local codes did not fit in the cpv_dic so switched to missing.
+// br cpv_div tender_unspsc_original if cpv_div=="99" //some of the local codes did not fit in the cpv_dic so switched to missing.
 replace  cpv_div=cpv_div +"000000" if !missing(cpv_div)
 rename cpv_div tender_cpvs
 
 gen market_id=substr(tender_cpvs,1,2)
-tab market_id, m
+// tab market_id, m
 replace market_id="NA" if missing(market_id)
 encode market_id,gen(market_id2)
 drop market_id
 rename market_id2 market_id
-tab market_id, m
+// tab market_id, m
 ************************************
-
 *Buyer type
-tab anb_type, m
+
+// tab anb_type, m
 label list anb_type
 
 gen buyer_type = ""
@@ -391,26 +385,26 @@ gen buyer_type2 = buyer_type
 replace buyer_type2="NA" if missing(buyer_type)
 encode buyer_type2, gen(anb_type)
 drop buyer_type2
-tab anb_type, m //use for regression
-tab anb_type_enum1, m //Nori's enumeration from the buyer name
-tab buyer_type, m //use for export
+// tab anb_type, m //use for regression
+// tab anb_type_enum1, m //Nori's enumeration from the buyer name
+// tab buyer_type, m //use for export
 ************************************
-
 *Locations
-br *anb*
-unique anb_dept
-unique anb_city
-unique anb_country
 
-tab anb_country_iso2, m
-tab anb_dept_iso , m
-tab anb_city_iso, m
-drop anb_dept_iso  anb_city_iso //bad codes
+// br *anb*
+// unique anb_dept
+// unique anb_city
+// unique anb_country
 
-tab anb_dept,m
-tab anb_city, m
+// tab anb_country_iso2, m
+// tab anb_dept_iso , m
+// tab anb_city_iso, m
+// drop anb_dept_iso  anb_city_iso //bad codes
+
+// tab anb_dept,m
+// tab anb_city, m
 *Standardize the names
-count if missing(anb_city) & !missing(anb_dept)
+// count if missing(anb_city) & !missing(anb_dept)
 
 *Clean dept names
 replace anb_dept= ustrtitle(anb_dept)
@@ -429,24 +423,23 @@ forval s=1/`n_temp'{
  replace y = "`: word `s' of `temp2''" if anb_dept=="`: word `s' of `temp''"
 }
 gen buyer_geocodes=x+y if !missing(anb_dept)
-br anb_dept x y buyer_geocodes if !missing(anb_dept) 
-drop alpha x y 
-
-
+// br anb_dept x y buyer_geocodes if !missing(anb_dept) 
+ 
 *Two level Nuts-like variable 
 gen anb_location1 = buyer_geocodes
 replace anb_location1="NA" if missing(anb_location1)
 encode anb_location1, gen(anb_location)
 drop anb_location1
-tab anb_location, m //used for regressions
+// tab anb_location, m //used for regressions
 ************************************
-
 * No supply type variable
+
 ************************************
 *Dates
-br *publi* *dead* *date*
+
+// br *publi* *dead* *date*
 /*
-*All in date formats
+*All in date formats already
 cft_bid_deadline
 ca_date_first -  coming from tender_publications_firstdcontra
 ca_contractsignaturedate-  from tender_contractsignaturedate
@@ -462,6 +455,6 @@ replace  aw_date= ca_date_first if missing(aw_date)
 format bid_deadline first_cft_pub aw_date %d
 ********************************************************************************
 
-save $country_folder/PY_wip.dta , replace
+save "${country_folder}/`country'_wip.dta" , replace
 ********************************************************************************
 *END
