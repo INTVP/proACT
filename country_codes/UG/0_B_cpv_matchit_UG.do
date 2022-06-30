@@ -1,34 +1,27 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country = "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the tender description to find the
  relvent cpv code using token string matching*/
 ********************************************************************************
-
 *Data
-import delimited $country_folder/UG_wip.csv, varnames(1)
+
+import delimited "${country_folder}/`country'_wip.csv", varnames(1) encoding(UTF-8) clear
 ********************************************************************************
 *Matching tender decription to cpv code
 
-
 gen miss_cpv=missing(cpv_code)
-tab miss_cpv if !missing(planb_descr)
-*0:43,314 1:28,808 total:71,122
-count if missing(planb_descr)
-count if missing(aw_title)
+// tab miss_cpv if !missing(planb_descr)
+// count if missing(planb_descr)
+// count if missing(aw_title)
 
-decode planb_descr, gen(planb_descr_str)
-decode aw_title, gen(aw_title_str)
-gen ten_description = planb_descr_str
-replace ten_description= aw_title_str if missing(ten_description)
-count if !missing(ten_description)
-format  planb_descr_str aw_title_str ten_description %25s
-br planb_descr_str aw_title_str ten_description
+// gen ten_description = planb_descr
+// replace ten_description= aw_title if missing(ten_description)
+// count if !missing(ten_description)
+// format  planb_descr_str aw_title_str ten_description %25s
+// br planb_descr_str aw_title_str ten_description
+
+gen  ten_description =  tender_title_orig
+replace ten_description= lot_title if missing(ten_description)
 
 replace ten_description = stritrim(ten_description)
 replace ten_description = strtrim(ten_description)
@@ -99,7 +92,7 @@ local stop " "΄" "{" "}" "+" "’" "~" "!" "*" "<" ">" "[" "]" "=" "&" "(" ")" 
 foreach v of local stop {
  replace ten_description_edit = subinstr(ten_description_edit, "`v'", "",.)
 }
-charlist ten_description_edit 
+// charlist ten_description_edit 
  
 replace ten_description_edit = subinstr(ten_description_edit, `"""', "",.)
 replace ten_description_edit = subinstr(ten_description_edit, `"$"', "",.) 
@@ -111,7 +104,7 @@ replace ten_description_edit = subinstr(ten_description_edit, `"/"', " ",.)
 replace ten_description_edit = subinstr(ten_description_edit, `"\"', "",.)	
 replace ten_description_edit = subinstr(ten_description_edit, `"_"', " ",.)	
 
-charlist ten_description_edit 
+// charlist ten_description_edit 
 forval var=1/8{
 replace ten_description_edit = subinstr(ten_description_edit, "  ", " ",.)
 }
@@ -143,36 +136,34 @@ forval s =1/`n_temp'{
 replace ten_description_edit = stritrim(ten_description_edit)
 replace ten_description_edit = strtrim(ten_description_edit)
 format ten_description_edit ten_description %40s
-br ten_description_edit ten_description
-
+// br ten_description_edit ten_description
 
 split ten_description_edit, p(" for " " in " " to ")
-format ten_description_edit* %19s
-br ten_description_edit*
+// format ten_description_edit* %19s
+// br ten_description_edit*
 
 
-unique  ten_description_edit
-unique  ten_description_edit1
-unique ten_description
+// unique  ten_description_edit
+// unique  ten_description_edit1
+// unique ten_description
 
 egen unqiue_id=group(ten_description_edit1)
-sort unqiue_id
+// sort unqiue_id
 
-save $country_folder/UG_ten_full.dta, replace
+save "${country_folder}/UG_ten_full.dta", replace
 
 keep unqiue_id ten_description_edit1
 duplicates drop ten_description_edit1, force
-unique  ten_description_edit1
-unique unqiue_id
+// unique  ten_description_edit1
+// unique unqiue_id
 
-save $country_folder/UG_ten_cleaned_nodup.dta, replace
+save "${country_folder}/UG_ten_cleaned_nodup.dta", replace
 
-use $country_folder/UG_ten_cleaned_nodup.dta, clear
-matchit unqiue_id ten_description_edit1 using $utility_data/cpv_code.dta, idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
+matchit unqiue_id ten_description_edit1 using "${utility_data}/cpv_code.dta", idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
 
-gsort - simil_token
-format ten_description_edit cpv_descr %50s
-br ten_description_edit cpv_descr simil_token
+// gsort - simil_token
+// format ten_description_edit cpv_descr %50s
+// br ten_description_edit cpv_descr simil_token
 
 drop if simil_token<0.61
 
@@ -180,11 +171,11 @@ gsort unqiue_id -simil_token
 bys unqiue_id: gen count=_n
 keep if count==1
 drop count
-save $country_folder/matches.dta, replace
+save "${country_folder}/matches.dta", replace
 
 *Merging back with full dataset
-use $country_folder/UG_ten_full.dta, replace
-merge m:1 unqiue_id using $country_folder/matches.dta, generate(_m)
+use "${country_folder}/UG_ten_full.dta", replace
+merge m:1 unqiue_id using "${country_folder}/matches.dta", generate(_m)
 drop unqiue_id
 drop ten_description_edit2-ten_description_edit9
 drop simil_token _m
@@ -195,21 +186,22 @@ rename code code_step1
 rename cpv_descr cpv_descr_step1
 egen unqiue_id=group(ten_description_edit1)
 sort unqiue_id
-save $country_folder/UG_ten_full_forstep2.dta, replace
+save "${country_folder}/UG_ten_full_forstep2.dta", replace
 
 *prepare data for matching
 drop if !missing(code)
 keep unqiue_id ten_description_edit1
 duplicates drop ten_description_edit1, force
-unique  ten_description_edit1
-unique unqiue_id
-save $country_folder/UG_ten_cleaned_nodup_forstep2.dta, replace
-use $country_folder/UG_ten_cleaned_nodup_forstep2.dta, clear
-matchit unqiue_id ten_description_edit1 using $utility_data/cpv_code.dta, idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
+// unique  ten_description_edit1
+// unique unqiue_id
+save "${country_folder}/UG_ten_cleaned_nodup_forstep2.dta", replace
+
+use "${country_folder}/UG_ten_cleaned_nodup_forstep2.dta", clear
+matchit unqiue_id ten_description_edit1 using "${utility_data}/cpv_code.dta", idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
 
 gsort - simil_token
-format ten_description_edit cpv_descr %50s
-br ten_description_edit cpv_descr simil_token
+// format ten_description_edit cpv_descr %50s
+// br ten_description_edit cpv_descr simil_token
 
 drop if simil_token<0.55
 
@@ -217,46 +209,17 @@ gsort unqiue_id -simil_token
 bys unqiue_id: gen count=_n
 keep if count==1
 drop count
-save $country_folder/matches_step2.dta, replace
+save "${country_folder}/matches_step2.dta", replace
 
 *Merging back with full dataset
-use $country_folder/UG_ten_full_forstep2.dta, replace
-merge m:1 unqiue_id using $country_folder/matches_step2.dta, generate(_m)
+use "${country_folder}/UG_ten_full_forstep2.dta", replace
+merge m:1 unqiue_id using "${country_folder}/matches_step2.dta", generate(_m)
 replace code_step1=code if missing(code_step1)
 replace cpv_descr_step1=cpv_descr if missing(cpv_descr_step1)
 drop unqiue_id
 drop simil_token _m
 drop code cpv_descr
-*******************************************************************************
-*Do it a 3rd time
-egen unqiue_id=group(ten_description_edit1)
-sort unqiue_id
 
-save $country_folder/UG_ten_full_forstep3.dta, replace
-*prepare data for matching
-drop if !missing(code_step1)
-keep unqiue_id ten_description_edit1
-duplicates drop ten_description_edit1, force
-unique  ten_description_edit1
-unique unqiue_id
-save $country_folder/UG_ten_cleaned_nodup_forstep3.dta, replace
-
-use $country_folder/UG_ten_cleaned_nodup_forstep3.dta, clear
-matchit unqiue_id ten_description_edit1 using "C:\Our folders\Aly\UG_fixes/cpv_code.dta" , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
-gsort - simil_token
-format ten_description_edit cpv_descr %50s
-br ten_description_edit cpv_descr simil_token
-*seems we reached the limit - highest match is 0.6 and most matches are bad
-*******************************************************************************
-*Abandon stop at step 2
-
-use $country_folder/UG_ten_full_forstep2.dta, replace
-merge m:1 unqiue_id using $country_folder/matches_step2.dta, generate(_m)
-replace code_step1=code if missing(code_step1)
-replace cpv_descr_step1=cpv_descr if missing(cpv_descr_step1)
-drop unqiue_id
-drop simil_token _m
-drop code cpv_descr
 rename code_step1 code
 rename cpv_descr_step1 cpv_descr
 
@@ -268,16 +231,13 @@ rename cpv_descr cpv_desc_aly
 
 gen miss_cpv_nori=missing(cpv_nori)
 gen miss_cpv_aly=missing(cpv_aly)
-tab miss_cpv_nori miss_cpv_aly if filter_ok==1
+// tab miss_cpv_nori miss_cpv_aly if filter_ok==1
 
-decode cpv_desc_nori, gen(cpv_desc_nori_str)
-drop cpv_desc_nori
-rename cpv_desc_nori_str cpv_desc_nori
 format cpv_desc_nori cpv_desc_aly %25s
 *common between nori and aly
-br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==0 & miss_cpv_aly==0
-br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==0 & miss_cpv_aly==1
-br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==1 & miss_cpv_aly==0
+// br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==0 & miss_cpv_aly==0
+// br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==0 & miss_cpv_aly==1
+// br ten_description cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly if  miss_cpv_nori==1 & miss_cpv_aly==0
 
 
 tostring cpv_nori,gen(cpv_nori_str)
@@ -289,12 +249,12 @@ gen cpv_desc_global = cpv_desc_nori
 replace cpv_desc_global=cpv_desc_aly if cpv_desc_global==""
 
 format cpv_desc_global %25s
-br planb_descr aw_title ten_description cpv_global cpv_desc_global cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly 
+// br planb_descr aw_title ten_description cpv_global cpv_desc_global cpv_nori cpv_desc_nori cpv_aly cpv_desc_aly 
 
 *Manual Additions
 
-drop ten_description cpv_aly_str cpv_desc_aly   miss_cpv_nori miss_cpv_aly cpv_desc_nori
-br ten_description_edit ten_description_edit1 if cpv_global=="."
+cap drop ten_description cpv_aly_str cpv_desc_aly   miss_cpv_nori miss_cpv_aly cpv_desc_nori
+// br ten_description_edit ten_description_edit1 if cpv_global=="."
 *a lot of advert and advertisments-fix it
 replace cpv_global="793410006"  if regex(ten_description_edit1,"advert") & cpv_global=="."
 replace cpv_desc_global="advertising services"  if regex(ten_description_edit1,"advert") & cpv_global=="793410006"
@@ -322,16 +282,29 @@ replace cpv_global="501000006"  if regex(ten_description_edit1,"vehicle") & rege
 replace cpv_desc_global="repair maintenance and associated services of vehicles and related equipment"  if regex(ten_description_edit1,"vehicle service") & cpv_global=="501000006"
 
 
-br ten_description_edit ten_description_edit1 cpv_global cpv_desc_global if cpv_global =="."
+// br ten_description_edit ten_description_edit1 cpv_global cpv_desc_global if cpv_global =="."
 
-count if cpv_global=="." & filter_ok==1
-local miss_cpv `r(N)'
-count if filter_ok==1
-local total `r(N)'
-di `miss_cpv'/`total' //improved to 30% missing from 48% missing
+// count if cpv_global=="." & filter_ok==1
+// local miss_cpv `r(N)'
+// count if filter_ok==1
+// local total `r(N)'
+// di `miss_cpv'/`total' //improved to 30% missing from 48% missing
 
-drop planb_descr_str aw_title_str  ten_description_edit1 cpv_nori_str cpv_code_str miss_cpv
+cap drop drop planb_descr aw_title 
+cap drop ten_description_edit1 ten_description_edit 
+cap drop cpv_nori_str cpv_code_str miss_cpv
+cap drop check
 ********************************************************************************
 
-save $country_folder/UG_cpv_fixed_200613.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
+*Clean up 
+
+erase "${country_folder}/UG_ten_full.dta"
+erase "${country_folder}/UG_ten_cleaned_nodup.dta"
+erase "${country_folder}/matches.dta"
+erase "${country_folder}/UG_ten_full_forstep2.dta"
+erase "${country_folder}/UG_ten_cleaned_nodup_forstep2.dta"
+erase "${country_folder}/matches_step2.dta"
+********************************************************************************
+*END

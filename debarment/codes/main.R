@@ -140,6 +140,7 @@ df_final <- df_final %>%
   rename(startDate = sanction.startdate) %>%
   rename(endDate = sanction.enddate) %>%
   rename(name = sanction.authority.name) %>%
+  rename(legalGround = sanction.legalgrounds) %>% # added legal grounds
   group_by(bidder_name_edited) %>%
   add_count(name = "bidder_sanction_times") %>%
   select(
@@ -151,6 +152,7 @@ df_final <- df_final %>%
     startDate,
     endDate,
     name,
+    legalGround, # added legal grounds
     df_bidders_freq
   )
 
@@ -197,6 +199,7 @@ df_final_reshaped <- df_final %>%
     name,
     bidder_hasSanction,
     bidder_previousSanction,
+    legalGround, # added legal grounds
     n
   )
 

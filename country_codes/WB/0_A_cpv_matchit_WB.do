@@ -1,25 +1,18 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the tender/contract titles to find the
  relvent cpv code using token string matching*/
 ********************************************************************************
 
 *Data
-use $utility_data/country/WB/starting_data/WB_data_parsed_191025_publication.dta, clear
+import delimited using "${utility_data}/country/`country'//starting_data/WB_data_parsed_191025_publication.csv", encoding(UTF-8)  varnames(1) clear 
 ********************************************************************************
-
 *Matching
-br *title* if !missing(ca_title) & !missing(cft_title)
+
+// br *title* if !missing(ca_title) & !missing(cft_title)
 gen title = ca_title 
 replace title = cft_title if missing(title)
-count if missing(title) //155,804
-*tab sector if missing(title), m
+// count if missing(title) //155,804
 
 *Cleaning the title variable 
 
@@ -94,7 +87,7 @@ replace title = subinstr(title, `"/"', " ",.)
 replace title = subinstr(title, `"\"', " ",.)	
 replace title = subinstr(title, `"_"', " ",.)	
 
-charlist title 
+// charlist title 
 ereplace title = sieve(title), omit(0123456789)
 
 local temp "january february march april may june july august september october november december jan feb apr jun jul sept aug oct nov dec"
@@ -118,44 +111,43 @@ replace title = subinstr(title, "  ", " ",.)
 }
 replace title = stritrim(title)
 replace title = strtrim(title)
-br title if !missing(title)
-unique  title
+// br title if !missing(title)
+// unique  title
 
-egen unqiue_id=group(title) //97,303
+egen unqiue_id=group(title) 
 sort title
-
 ********************************************************************************
-save $country_folder/WB_full.dta, replace
+save "${country_folder}/`country'_full.dta", replace
 ********************************************************************************
 keep unqiue_id title
 duplicates drop title, force
 keep if !missing(title)
-unique  title
-unique unqiue_id
-save $country_folder/WB_cleaned_nodup.dta, replace
+// unique  title
+// unique unqiue_id
+save "${country_folder}/`country'_cleaned_nodup.dta", replace
 ********************************************************************************
 
-use $country_folder/WB_cleaned_nodup.dta, replace
+use "${country_folder}/`country'_cleaned_nodup.dta", clear
 
-matchit unqiue_id title using $utility_data/cpv_code.dta , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.2) over  
+matchit unqiue_id title using "${utility_data}/cpv_code.dta" , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.2) over  
 gsort - simil_token
 format title cpv_descr %50s
-br title cpv_descr simil_token
+// br title cpv_descr simil_token
 
 gsort unqiue_id -simil_token
 bys unqiue_id: gen count=_n
 keep if count==1
 drop count
-save $coutnry_folder/matches1.dta, replace
+save "${country_folder}/matches1.dta", replace
 ********************************************************************************
 
 *Merging back with full dataset
-use $country_folder/WB_full.dta, replace
-merge m:1 unqiue_id using $country_folder/matches1.dta, generate(_m)
+use "${country_folder}/`country'_full.dta", clear
+merge m:1 unqiue_id using "${country_folder}/matches1.dta", generate(_m)
 *drop unqiue_id
 drop simil_token _m
 format title cpv_desc %40s
-br title cpv_desc if !missing(code) & !missing(title)  
+// br title cpv_desc if !missing(code) & !missing(title)  
 
 *dropping bad matches 
 replace code=. if title=="rehabilitation roads foot paths stormwater drain system central park lake tsivi in tskaltubo town"
@@ -167,9 +159,9 @@ replace cpv_desc="advertising campaign services" if title=="public awareness"
 replace code=. if code==34220004
 replace cpv_desc="" if cpv_desc=="lac"
 ********************************************************************************
-
 *More cleaning for better matching
-br title  if missing(code) & !missing(title)  
+
+// br title  if missing(code) & !missing(title)  
 
 local temp "upgrading assistance complete completion complex component compra de gprocurement head hgjbi hgjbc revised hh yr"
 local n_temp : word count `temp'
@@ -183,44 +175,47 @@ replace title = subinstr(title, "  ", " ",.)
 }
 replace title = stritrim(title)
 replace title = strtrim(title)
-br title if !missing(title)
-unique  title
+// br title if !missing(title)
+// unique  title
 drop unqiue_id
 egen unqiue_id=group(title)
 sort title
-cd "C:\Our folders\Aly\WB portals\data fixes\WB"
-save $country_folder/WB_full.dta, replace
+
+save "${country_folder}/`country'_full.dta", replace
 ********************************************************************************
 * 2nd matching 
+
 keep unqiue_id title code
 drop if !missing(code)
 drop code
 duplicates drop title, force
 keep if !missing(title)
-unique  title
-unique unqiue_id
-save $country_folder/WB_cleaned_nodup_2.dta, replace
+// unique  title
+// unique unqiue_id
+
+save "${country_folder}/`country'_cleaned_nodup_2.dta", replace
 ********************************************************************************
 
-use $country_folder/WB_cleaned_nodup_2.dta, clear
-matchit unqiue_id title using $utility_data/cpv_code.dta , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.2) over  
+use "${country_folder}/`country'_cleaned_nodup_2.dta", clear
+matchit unqiue_id title using "${utility_data}/cpv_code.dta" , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(jaccard) g(simil_token) stopw swt(0.9) time flag(10) t(0.2) over  
 gsort - simil_token
 format title cpv_descr %50s
-br title cpv_descr simil_token
+// br title cpv_descr simil_token
 gsort unqiue_id -simil_token
 bys unqiue_id: gen count=_n
 keep if count==1
 gsort -simil_token
-br
 drop count
-save $country_folder/matches2.dta, replace
-********************************************************************************
 
+save "${country_folder}/matches2.dta", replace
+********************************************************************************
 *Merging back with full dataset ver 2
-use $country_folder/WB_full.dta, replace
+
+use "${country_folder}/`country'_full.dta", clear
+
 rename code code1 
 rename cpv_descr cpv_descr1
-merge m:1 unqiue_id using $country_folder/matches2.dta, generate(_m)
+merge m:1 unqiue_id using "${country_folder}/matches2.dta", generate(_m)
 drop simil_token _m
 
 replace code1 = code if missing(code1) | code1==.
@@ -239,8 +234,8 @@ replace cpv_code =. if nrwords>=`r(p99)'
 replace cpv_descr ="" if nrwords>=`r(p99)'
 drop nrwords
 ********************************************************************************
-
 *Manual matching
+
 replace cpv_code=793410006  if regex(title,"advert") & cpv_code==.
 replace cpv_descr="advertising services"  if regex(title,"advert") & cpv_code==793410006
 
@@ -249,9 +244,6 @@ replace cpv_descr="hotel accommodation services"  if regex(title,"accommodation|
 
 replace cpv_code=224590002  if regex(title,"airticket|airtime") & cpv_code==.
 replace cpv_descr="tickets"  if regex(title,"airticket|airtime") & cpv_code==224590002
-
-*replace code=351134003  if regex(title,"protective wear") & code==.
-*replace cpv_descr="protective and safety clothing"  if regex(title,"protective wear") & code==351134003
 
 replace cpv_code=322500000  if regex(title,"smartphone") & cpv_code==.
 replace cpv_descr="mobile telephones"  if regex(title,"smartphone") & cpv_code==322500000
@@ -276,15 +268,14 @@ replace cpv_code=33600000  if regex(title,"pharmaceuticals") & cpv_code==.
 replace cpv_descr="Pharmaceutical products"  if regex(title,"pharmaceuticals") & cpv_code==33600000
 
 ********************************************************************************
-preserve
-	keep if !missing(ca_source)
-	*keep if !missing(title)
-	count if missing(cpv_code)
-	di `r(N)'/_N
-restore
-drop  unqiue_id sector
+// preserve
+// 	keep if !missing(ca_source)
+// 	*keep if !missing(title)
+// 	count if missing(cpv_code)
+// 	di `r(N)'/_N
+// restore
+drop  unqiue_id 
 ********************************************************************************
-
 *Adding match words from a 2nd list
 
 replace cpv_code=797100004  if regex(title,"security") & regex(title,"services") & cpv_code==.
@@ -415,9 +406,6 @@ replace cpv_descr="Surveying services"  if regex(title,"survey") & cpv_code==713
 
 replace cpv_code=452113105  if regex(title,"bathroom")  & cpv_code==.
 replace cpv_descr="Bathrooms construction work"  if regex(title,"bathroom") & cpv_code==452113105
-
-/*replace cpv_code=91340007  if regex(title,"gas")  & cpv_code==.
-replace cpv_descr=""  if regex(title,"gas") & cpv_code==91340007*/
 
 replace cpv_code=240000004  if regex(title,"chemical")  & cpv_code==.
 replace cpv_descr="Chemical products"  if regex(title,"chemical") & cpv_code==240000004
@@ -578,29 +566,37 @@ replace cpv_descr="Radiotherapy devices and supplies"  if regex(title,"oxygen") 
 replace cpv_code=341444318  if regex(title,"suction") & cpv_code==.
 replace cpv_descr="Suction-sweeper vehicles"  if regex(title,"suction") & cpv_code==341444318
 
+cap drop title
 ********************************************************************************
 *Make sure the matched cpv entries include 03 and 09
 tostring cpv_code, gen(cpv_code2)
 drop cpv_code
 rename cpv_code2 cpv_code
 format cpv_code cpv_descr %20s
-br cpv_code cpv_descr
+// br cpv_code cpv_descr
 replace cpv_code="" if cpv_code=="."
 cap drop len
 gen len = length(cpv_code)
-tab len, m
+// tab len, m
 sort cpv_code
-br cpv_code if len==7 //replace these with o in the begninning
+// br cpv_code if len==7 //replace these with o in the begninning
 replace cpv_code="0" + cpv_code if len==7
 gen cpv2=substr(cpv_code,1,2)
-tab cpv2 if len==8, m
+// tab cpv2 if len==8, m
 replace cpv_code="0" + cpv_code if len==8 & inlist(cpv2,"31","32","34","91","92","93")
 drop cpv2 len
 gen cpv2=substr(cpv_code,1,2)
-tab cpv2, m
+// tab cpv2, m
 drop cpv2
 ********************************************************************************
 
-save $country_folder//WB_wip.dta, replace
+save "${country_folder}//`country'_wip.dta", replace
+********************************************************************************
+*Clean up
+cap erase "${country_folder}//matches1.dta"
+cap erase "${country_folder}//matches2.dta"
+cap erase "${country_folder}//`country'_cleaned_nodup.dta"
+cap erase "${country_folder}//`country'_cleaned_nodup_2.dta"
+cap erase "${country_folder}//`country'_full.dta"
 ********************************************************************************
 *END

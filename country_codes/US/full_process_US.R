@@ -2,9 +2,10 @@ args = commandArgs(trailingOnly=TRUE)
 
 #Setting Paths
 setwd(args[1])
-utility_codes = args[2]
-utility_data = args[3]
+utility_data = args[2]
 
+# setwd("C:/Ourfolders/Aly/ProACT-2020/country_codes/US")
+utility_data = "C:/Ourfolders/Aly/ProACT-2020/utility_data"
 #Libraries 
 # Packages 
 # Load and Install libraries ----
@@ -290,7 +291,7 @@ list.vars <-
     "recipient_address_line_1",
     "recipient_address_line_2",
     "recipient_city_name",
-    "recipient_state_code",
+    "recipient_state_code", 
     "recipient_state_name",
     "recipient_zip_4_code",
     "recipient_congressional_district",
@@ -342,7 +343,15 @@ list.vars <-
 export <- 
   us_award_data_filtered_try %>% 
   select(list.vars)
-
+rm(
+  buyer,
+  buyer_bidder,
+  buyer_conc_df,
+  buyers_proc_summary,
+  us_award_data_filtered,
+  us_award_data_filtered_try,
+  us_benford
+)
 export[export==''] <- NA
 #readr::write_csv(export, 'US_input.csv', na = '.')
 
@@ -394,7 +403,10 @@ export$bid_pricecurrency <- "USD"
 #summary(as.factor(us_award_data_filtered_try$award_or_idv_flag))
 export$buyer_postcode<- export$primary_place_of_performance_zip_4
 export$buyer_city <- export$primary_place_of_performance_city_name
-export$buyer_geocodes<- "NA"
+export$buyer_geocodes<- export$primary_place_of_performance_state_code
+export$bidder_geocodes<- export$recipient_state_code
+
+ 
 export$bidder_city <- export$recipient_city_name
 export$buyer_mainactivities <- "NA"
 export$lot_estimatedprice <-  "NA"
@@ -405,13 +417,17 @@ export$tender_publications_lastcontract<-  "NA"
 export$tender_biddeadline<-  "NA"
 export$tender_publications_firstcallfor<-  "NA"
 export$tender_publications_firstdcontra<-  "NA"
-export$bidder_geocodes <- "NA"
 export$tender_supplytype <- "NA"
 export$buyer_buyertype <- "NA"
 export$tender_addressofimplementation_c <- "US"
 export$tender_addressofimplementation_n <- "NA"
 export$bids_count <- export$number_of_offers_received
+
 export$tender_cpvs <- export$product_or_service_code
+export$lot_localProductCode <- export$product_or_service_code
+export$lot_localProductCode_type <- "PSC"
+
+
 export$tender_finalprice <- export$obligated_amount
 export$tender_id <- export$award_id_piid
 export$lot_number <- export$award_id_piid
@@ -421,6 +437,8 @@ export$export_tender_proceduretype <-
     "-",
     as.character(export$solicitation_procedures_code)
   )
+export$tender_nationalproceduretype<- export$extent_competed_code
+
 #summary(as.factor(export$export_tender_proceduretype))
 
 
@@ -504,6 +522,12 @@ export$ind_corr_overrun_val[export$corr_overrun==0] <- 100
 export$ind_corr_overrun_val[export$corr_overrun==1] <- 0
 #table(export$ind_corr_overrun_val)
 
+export$ind_corr_delay_val <- NA
+export$ind_corr_delay_val[export$corr_delay==0] <- 100
+export$ind_corr_delay_val[export$corr_delay==1] <- 0
+#table(export$ind_corr_delay_val)
+
+
 export$ind_corr_proc_val <- NA
 export$ind_corr_proc_val[export$corr_proc==0] <- 100
 export$ind_corr_proc_val[export$corr_proc==0.5] <- 50
@@ -523,6 +547,9 @@ export$ind_corr_submp_type = "INTEGRITY_ADVERTISEMENT_PERIOD"
 export$ind_corr_decp_type = "INTEGRITY_DECISION_PERIOD"
 export$ind_corr_ben_type = "INTEGRITY_BENFORD"
 export$ind_csh_type = "INTEGRITY_WINNER_SHARE"
+export$ind_roverrun2_type =  "INTEGRITY_COST_OVERRUN"
+export$ind_delay_type =  "INTEGRITY_DELAY"
+
 export$ind_tr_buyer_name_type = "TRANSPARENCY_BUYER_NAME_MISSING"
 export$ind_tr_tender_title_type = "TRANSPARENCY_TITLE_MISSING" 
 export$ind_tr_bidder_name_type = "TRANSPARENCY_BIDDER_NAME_MISSING"
@@ -560,6 +587,17 @@ export$ind_taxhav2_val <- NA
 
 export$ind_tr_title_val <- export$tender_title
 
+export$ind_tr_title_val[is.na(export$tender_title)] <- 0 
+export$ind_tr_title_val[!is.na(export$tender_title)] <- 100
+
+export$ind_tr_proc_val[is.na(export$tender_nationalproceduretype)] <- 0 
+export$ind_tr_proc_val[!is.na(export$tender_nationalproceduretype)] <- 100
+
+export$ind_tr_bids_val[is.na(export$bids_count)] <- 0 
+export$ind_tr_bids_val[!is.na(export$bids_count)] <- 100
+
+export$ind_tr_aw_date2_val <- 0 
+
 export <- export %>% arrange(tender_id,lot_number,bid_number)
 
 vars <-
@@ -571,6 +609,7 @@ vars <-
     "tender_awarddecisiondate",
     "tender_contractsignaturedate",
     "tender_biddeadline",
+    "tender_nationalproceduretype",
     "tender_proceduretype",
     "tender_supplytype",
     "source",
@@ -595,6 +634,7 @@ vars <-
     "bidder_masterid",
     "bidder_id",
     "bidder_country",
+    "bidder_city",
     "bidder_geocodes",
     "bidder_name",
     "bid_priceUsd",
@@ -619,16 +659,24 @@ vars <-
     "ind_singleb_type",
     "ind_taxhav2_val",
     "ind_taxhav2_type",
+    "decp",
     "ind_corr_decp_val",
     "ind_corr_decp_type",
     "ind_corr_proc_val",
     "ind_corr_proc_type",
+    "submp",
     "ind_corr_submp_val",
     "ind_corr_submp_type",
     "ind_corr_ben_val",
     "ind_corr_ben_type",
     "ind_csh_val",
     "ind_csh_type",
+    "ind_corr_overrun_val",
+    "ind_roverrun2_type",
+    "ind_corr_delay_val",
+    "ind_delay_type",
+    "overrun",
+    "delay",
     "ind_tr_buyer_name_val",
     "ind_tr_buyer_name_type",
     "ind_tr_title_val",
@@ -646,29 +694,28 @@ vars <-
     "ind_tr_bids_val",
     "ind_tr_bids_type",
     "ind_tr_aw_date2_val",
-    "ind_tr_aw_date2_type"
+    "ind_tr_aw_date2_type",
+    "tender_year"
   )
 
 export$bid_priceUsd <- export$bid_price
 export$lot_productCode <- (export$tender_cpvs)
-export$lot_localProductCode <- (export$tender_cpvs)
-export$lot_localProductCode_type <- "CPV2008"
+
 
 export$lot_estimatedpriceUsd <- NA
 export$ind_corr_nocft_val <- export$ind_nocft_val
 export$ind_corr_decp_val <- NA
 export$ind_corr_submp_val <- NA
-
+export$decp <- NA
+export$submp <- NA
 
 export$ind_tr_buyer_name_val <- 100
 export$ind_tr_bidder_name_val <- 100
 export$ind_tr_tender_supplytype_val <- NA
 export$ind_tr_bid_price_val <- 100
 
-export$ind_tr_impl_val <- NA
-export$ind_tr_proc_val <- NA
-export$ind_tr_bids_val <- NA
-export$ind_tr_aw_date2_val <- NA
+export$ind_tr_impl_val <- 0
+
 
 export$bidder_country <- (export$recipient_country_code)
 export_vf <- 
@@ -678,5 +725,6 @@ export_vf <-
 #length(is.na(export_vf$title))
 #summary(is.na(export_vf$title))
 
-write_csv(export_vf, 'US_mod.csv')
+write_csv(export_vf, 'US_wip.csv')
 #END
+

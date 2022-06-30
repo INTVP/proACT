@@ -1,34 +1,70 @@
+args = commandArgs(trailingOnly=TRUE)
+setwd(args[1])
+utility_data = args[2]
 
-#Libraries 
-library(stringr)
-library(tm)
-library(data.table)
-library(tokenizers)
-library(dplyr)
-library(haven)
+# Packages 
+# Load and Install libraries ----
 
+# FIRST: check if pacman is installed. 
+# This package installs and loads other packages
+if (!require(pacman)) {
+  install.packages("pacman", dependencies = TRUE)
+}
 
-#Setting Paths
-getwd()
-country_folder = getwd()
-setwd('..')
-setwd('..')
-utility_codes = paste0(getwd(),"/utility_codes/")
-utility_data = paste0(getwd(),"/utility_data/")
+# SECOND: list all other packages that will be used
+# Add libraries as needed here.
+# Please also add the reason why this library is added
+packages <- c(
+  "stringr", 
+  "data.table", 
+  "tokenizers", 
+  "dplyr", 
+  "haven"
+)  
+
+# THIRD: installing and loading the packages
+# The following lines checks if the libraries are installed.
+# If installed, they will be loaded.
+# If not, they will be installed then loaded.
+p_load(
+  packages, 
+  character.only = TRUE, 
+  depencies = TRUE
+)
+
+options(warn=0) # suppress warnings OFF
+
 
 
 #Loading data 
-health <- read.csv(paste0(utility_data,"country/UG/health_termsRN.csv"), header = TRUE, sep = ";")
-df <- read_stata(
-  paste0(utility_data,"country/UG/starting_data/dfid2_ug_cri_200515.dta"),
-  encoding = "UTF8")
+health <-
+  read.csv(
+    paste0(utility_data, "/country/UG/health_termsRN.csv"),
+    header = TRUE,
+    sep = ","
+  )
 
+#Old data: dfid2_ug_cri_200515.csv
+df <- data.table::fread(
+  paste0(utility_data,"/country/UG/starting_data/UG_final_data.csv"),
+  header = TRUE,
+  keepLeadingZeros = TRUE,
+  encoding = "UTF-8",
+  stringsAsFactors = FALSE,
+  showProgress = TRUE,
+  na.strings = c("", "-", "NA"),
+  fill = TRUE
+)
+
+# df$tender_title <- df$planpr_title
+# df$tender_title <- ifelse(is.na(df$tender_title),
+#                           df$aw_title,
+#                           df$tender_title)
 
 df$tender_title_orig <- df$tender_title
-
 df$tender_title <- as.character(df$tender_title)
 df$tender_title <- str_squish(df$tender_title)
-df <- df[!duplicated(df$tender_title), ]
+#df <- df[!duplicated(df$tender_title), ]
 
 #remove irrelevant words
 df$tender_title <- gsub("[[:punct:]]", " ", df$tender_title) 
@@ -55,48 +91,70 @@ df$ca_descr_cpv <- gsub("april", "", df$ca_descr_cpv)
 df$ca_descr_cpv <- gsub("january", "", df$ca_descr_cpv)
 df$tender_title <- str_squish(df$tender_title)
 
-descr <- tm_map(descr, removePunctuation)
-descr <- tm_map(descr, removeWords, stopwords("english"))
-descr <- tm_map(descr, stripWhitespace)
-descr <- tm_map(descr, stemDocument)
-descr <- tm_map(descr, PlainTextDocument)
+# descr <- tm_map(descr, removePunctuation)
+# descr <- tm_map(descr, removeWords, stopwords("english"))
+# descr <- tm_map(descr, stripWhitespace)
+# descr <- tm_map(descr, stemDocument)
+# descr <- tm_map(descr, PlainTextDocument)
 
 #most common single words
-dtm <- DocumentTermMatrix(descr)
-dtm2 <- as.matrix(dtm)
-wordfreq <- colSums(dtm2)
-wordfreq <- sort(wordfreq, decreasing=TRUE)
-head(wordfreq, n=400)
+# dtm <- DocumentTermMatrix(descr)
+# dtm2 <- as.matrix(dtm)
+# wordfreq <- colSums(dtm2)
+# wordfreq <- sort(wordfreq, decreasing=TRUE)
+# head(wordfreq, n=400)
 
 
 #identify most common two words expressions
-bigr <- tokenize_ngrams(df$ca_descr_cpv, n = 2)
-sigr <- tokenize_ngrams(df$ca_descr_cpv, n = 1)
-
-descr2 <- data.frame(unlist(bigr), stringsAsFactors = F)
-setDT(descr2, keep.rownames = T)
-setnames(descr2, 1, "rownr")
-setnames(descr2, 2, "term")
-
-descr2$nr_occ <- 1
-
-#count most frequent expressions
-freq_ug <- descr2 %>% 
-  group_by(term) %>%
-  summarise(frequg = sum(nr_occ))
+# bigr <- tokenize_ngrams(df$ca_descr_cpv, n = 2)
+# sigr <- tokenize_ngrams(df$ca_descr_cpv, n = 1)
+# 
+# descr2 <- data.frame(unlist(bigr), stringsAsFactors = F)
+# setDT(descr2, keep.rownames = T)
+# setnames(descr2, 1, "rownr")
+# setnames(descr2, 2, "term")
+# 
+# descr2$nr_occ <- 1
+# 
+# #count most frequent expressions
+# freq_ug <- descr2 %>%
+#   group_by(term) %>%
+#   summarise(frequg = sum(nr_occ))
 
 
 health$health_term <- as.character(health$health_term)
 health$nchar <- nchar(health$health_term)
 
 #remove irrelevant keywords from health terms
-health <- health[-c(health$row_nr==143, health$row_nr==152, health$row_nr==237 , health$row_nr==238 , health$row_nr==370 , health$row_nr==393 , health$row_nr==422 , health$row_nr==484 , health$row_nr==514 , health$row_nr==921 , health$row_nr==922 , health$row_nr==923 , health$row_nr==930 , health$row_nr==1031 , health$row_nr==1063 , health$row_nr==1068), ]
+health <-
+  health[-c(
+    health$row_nr == 143,
+    health$row_nr == 152,
+    health$row_nr == 237 ,
+    health$row_nr == 238 ,
+    health$row_nr == 370 ,
+    health$row_nr == 393 ,
+    health$row_nr == 422 ,
+    health$row_nr == 484 ,
+    health$row_nr == 514 ,
+    health$row_nr == 921 ,
+    health$row_nr == 922 ,
+    health$row_nr == 923 ,
+    health$row_nr == 930 ,
+    health$row_nr == 1031 ,
+    health$row_nr == 1063 ,
+    health$row_nr == 1068
+  ),]
 
 health <- health[ -c(health$nchar <=3), ]
 
 df$ca_descr_cpv <- df$tender_title
-df$cpv_code <- NA
-df$cpv_code <- ifelse(is.na(df$cpv_code),tkn$code[match(df$ca_descr_cpv, tkn$ca_descr_cpv)], df$cpv_code)
+# df$cpv_code <- NA
+# df$cpv_code <-
+#   ifelse(is.na(df$cpv_code),
+#          tkn$code[match(df$ca_descr_cpv,
+#                         tkn$ca_descr_cpv)],
+#          df$cpv_code)
 
 df$cpv_code <- ifelse(grepl("motor vehicle", df$ca_descr_cpv) & is.na(df$cpv_code),341000008, df$cpv_code)
 df$cpv_code <- ifelse(grepl("hotel services", df$ca_descr_cpv) & is.na(df$cpv_code),551000001, df$cpv_code)
@@ -208,9 +266,9 @@ df$cpv_code <- ifelse(grepl("consultancy services", df$ca_descr_cpv) & is.na(df$
 df$cpv_code <- ifelse(is.na(df$cpv_code),983900003, df$cpv_code)
 
 
-tt <- subset(df, grepl("management system", df$ca_descr_cpv))
-tt <- subset(tt, is.na(tt$cpv_code))
-sum(!is.na(df$cpv_code))
+# tt <- subset(df, grepl("management system", df$ca_descr_cpv))
+# tt <- subset(tt, is.na(tt$cpv_code))
+# sum(!is.na(df$cpv_code))
 
 #check if tender title includes listed health terms and assign the cpv code if yes
 #check <- ifelse(sapply(health$health_term, grep, df$ca_descr_cpv), 1, 0)
@@ -218,5 +276,5 @@ df$check <- ifelse(grepl(paste(health$health_term, collapse = "|"), df$ca_descr_
 df$cpv_code <- ifelse(df$check==1 & is.na(df$cpv_code),336000006, df$cpv_code)
 df$cpv_code <- ifelse(df$cpv_code==983900003, NA, df$cpv_code)
 
-path_save <- paste0(country_folder,"UG_wip.csv")
-write.csv(df, path_save)
+data.table::fwrite(df,"UG_wip.csv",
+                   quote = TRUE, sep = "," )

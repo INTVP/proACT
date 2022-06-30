@@ -1,17 +1,11 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares merges location data for the MX dataset
 The locations were retreived using Here Api*/
 ********************************************************************************
 
 *Data 
-use $country_folder/MX_wip.dta, replace
+use "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 
 gen name = anb_name
@@ -64,22 +58,22 @@ drop if missing(buyer_name_api_en)
 */
 ********************************************************************************
 
-merge m:1 buyer_name_edited using $utility_data/country/MX/MX_buyers_locations_api.dta
+merge m:1 buyer_name_edited using "${utility_data}/country/`country'/MX_buyers_locations_api.dta"
 drop buyer_name_edited
-br anb_name buyer_name_api_en buyer_district_api buyer_city_api buyer_state_api buyer_country_api
+// br anb_name buyer_name_api_en buyer_district_api buyer_city_api buyer_state_api buyer_country_api
 *Create location from city
-unique buyer_district_api
-unique buyer_city_api
-unique buyer_state_api
-unique buyer_country_api
+// unique buyer_district_api
+// unique buyer_city_api
+// unique buyer_state_api
+// unique buyer_country_api
 *Generate geo codes
 tab  buyer_state_api, m
 replace buyer_state_api="Nuevo León" if buyer_state_api=="Nuevo Leon"
 replace buyer_state_api="Estado de México" if buyer_state_api=="State of Mexico"
 count if missing(buyer_district_api)
-tab  buyer_city_api, m
-tab  buyer_state_api, m
-tab  buyer_country_api, m
+// tab  buyer_city_api, m
+// tab  buyer_state_api, m
+// tab  buyer_country_api, m
 ********************************************************************************
 
 gen x = "MX" if !missing(buyer_state_api)
@@ -99,8 +93,9 @@ gen z=""
 forval s=1/`n_temp'{
  replace z = "`: word `s' of `temp2''" if buyer_state_api=="`: word `s' of `temp''"
 }
+
 bys buyer_state_api: egen alpha = nvals(buyer_city_api)
-tab alpha //max 7
+// tab alpha //max 7
 bys buyer_state_api buyer_city_api: gen yy = _n==1
 gsort buyer_state_api -buyer_city_api
 bys buyer_state_api yy : gen xx = _n if yy==1 & !missing(buyer_city_api)
@@ -108,15 +103,23 @@ sort buyer_state_api buyer_city_api xx
 bys buyer_state_api buyer_city_api: replace xx = xx[1]  if missing(xx)
 tostring xx, replace
 replace xx="" if xx=="."
-br buyer_state_api buyer_city_api yy if yy==1
-br buyer_state_api buyer_city_api x y z yy xx buyer_geocodes
-gen buyer_geocodes=x+y+z+xx
+// br buyer_state_api buyer_city_api yy if yy==1
+// br buyer_state_api buyer_city_api x y z yy xx buyer_geocodes
+cap drop buyer_geocodes
+gen buyer_geocodes=x+y+z
 drop _merge x y z alpha yy xx
-save MX_wip, replace
-use MX_wip, clear
-br buyer_geocodes *buyer*
+
+preserve
+	keep buyer_geocodes buyer_state_api
+	rename buyer_geocodes geocodes
+	rename buyer_state_api region
+	duplicates drop 
+	sort geocodes
+	drop if missing(geocodes)
+	export delimited "${utility_data}/country/`country'/`country'_region_labels.csv", replace
+restore
 ********************************************************************************
 
-save $country_folder/MX_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

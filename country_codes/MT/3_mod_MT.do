@@ -10,60 +10,7 @@ the reverse flatten tool.
 *Data
 use "${country_folder}/`country'_wb_1020.dta", clear
 ********************************************************************************
-*Calcluating indicators
-
-// tab nocft , m
-// tab singleb , m
-// tab taxhav2 , m
-// tab corr_decp, m
-// tab corr_submp , m
-// tab corr_proc, m
-************************************
-*For indicators with 1 category - transformed to the integrity version
-
-foreach var of varlist nocft singleb taxhav2 corr_submp corr_decp corr_proc {
-// tab `var', m
-gen ind_`var'_val = 0
-replace ind_`var'_val = 0 if `var'==1
-replace ind_`var'_val = 100 if `var'==0
-replace ind_`var'_val =. if missing(`var') | `var'==99
-replace ind_`var'_val = .  if  `var'==9  //tax haven undefined
-}
-gen ind_corr_ben_val = .
-
-// tab ind_nocft_val  nocft, m
-// tab ind_singleb_val  singleb, m
-// tab ind_taxhav2_val  taxhav2, m
-// tab ind_corr_submp_val  corr_submp, m
-************************************
-*Contract Share
-
-// sum w_ycsh4
-gen ind_csh_val = w_ycsh4*100
-replace ind_csh_val = 100-ind_csh_val
-*replace ind_csh_status = "INSUFFICIENT D`country'A" if missing(w_ycsh)
-*replace ind_csh_status = "UNDEFINED" if missing(w_ycsh4) & !missing(w_ycsh)
-************************************
-*Transparency Indicators
-
-// br tender_addressofimplementation_n tender_nationalproceduretype tender_publications_firstdcontra
-gen title =lot_title
-replace title = tender_title if missing(title)
-gen impl= tender_addressofimplementation_n
-gen proc = tender_nationalproceduretype
-gen aw_date2 = tender_publications_firstdcontra
-gen bids =lot_bidscount
-foreach var of varlist buyer_name title bidder_name tender_supplytype bid_price impl proc bids aw_date2  {
-gen ind_tr_`var'_val = 0
-replace  ind_tr_`var'_val = 100 if !missing(`var')
-}
-cap drop  impl proc aw_date2 title bids
-********************************************************************************
-save "${country_folder}/`country'_wb_1020.dta",replace
-********************************************************************************
 *Exporting for the rev flatten tool - Creating the XX_mod.csv
-
-use "${country_folder}/`country'_wb_1020.dta",clear
 
 drop if missing(tender_publications_lastcontract)
 drop if filter_ok==0
@@ -90,6 +37,10 @@ bys tender_id lot_number: gen bid_number=_n
 *Generate tender country
 
 gen tender_country = "`country'"
+************************************
+*Fix bad national procedure type
+
+do "${utility_codes}/fix_bad_national_proc_type.do"
 ************************************
 *Generate notice type 
 
@@ -147,14 +98,14 @@ replace bidder_geocodes = bidder_nuts + "000" if bidder_nuts_len==2
 
 replace  bidder_geocodes = "["+ `"""' + bidder_geocodes + `"""' +"]"
 ************************************
-*Export previosly sanctioned and has sanction - even if no sanction data 
-*required for reverse flatten tool
-
-gen bidder_previousSanction = "false"
-gen bidder_hasSanction = "false"
-gen sanct_startdate = ""
-gen sanct_enddate = ""
-gen sanct_name = ""
+// *Export previosly sanctioned and has sanction - even if no sanction data 
+// *required for reverse flatten tool
+//
+// gen bidder_previousSanction = "false"
+// gen bidder_hasSanction = "false"
+// gen sanct_startdate = ""
+// gen sanct_enddate = ""
+// gen sanct_name = ""
 ************************************
 *Variable Renaming 
 
@@ -193,6 +144,7 @@ gen ind_corr_submp_type = "INTEGRITY_ADVERTISEMENT_PERIOD"
 gen ind_corr_decp_type = "INTEGRITY_DECISION_PERIOD"
 gen ind_corr_ben_type = "INTEGRITY_BENFORD"
 gen ind_csh_type = "INTEGRITY_WINNER_SHARE"
+
 gen ind_tr_buyer_name_type = "TRANSPARENCY_BUYER_NAME_MISSING"
 gen ind_tr_tender_title_type = "TRANSPARENCY_TITLE_MISSING"
 gen ind_tr_bidder_name_type = "TRANSPARENCY_BIDDER_NAME_MISSING"
@@ -202,10 +154,16 @@ gen ind_tr_impl_type = "TRANSPARENCY_IMP_LOC_MISSING"
 gen ind_tr_proc_type = "TRANSPARENCY_PROC_METHOD_MISSING"
 gen ind_tr_bids_type = "TRANSPARENCY_BID_NR_MISSING"
 gen ind_tr_aw_date2_type = "TRANSPARENCY_AWARD_D`country'E_MISSING"
+
+gen ind_comp_bidder_mkt_entry_type = "COMPETITION_SUPPLIER_MARKET_ENTRY"
+gen ind_comp_bidder_non_local_type = "COMPETITION_NON_LOCAL_SUPPLIER"
+gen ind_comp_bidder_mkt_share_type = "COMPETITION_SUPPLIER_MARKET_SHARE"
+gen ind_comp_bids_count_type = "COMPETITION_NUMBER_OF_BIDDERS"
+
 ************************************
 *Check if the binary variables have true/false values instead of t/f or True/False
-
-foreach var of varlist bid_iswinning bidder_hasSanction bidder_previousSanction {
+// bidder_hasSanction bidder_previousSanction 
+foreach var of varlist bid_iswinning {
 replace `var' = lower(`var')
 replace `var' = "true" if inlist(`var',"true","t")
 replace `var' = "false" if inlist(`var',"false","f")
@@ -217,17 +175,92 @@ foreach var of varlist buyer_id bidder_id {
 tostring `var', replace
 replace `var' = "" if `var'=="."
 }
+
+foreach var of varlist buyer_name bidder_name {
+replace `var' = ustrupper(`var')
+}
+
 // br  buyer_id bidder_id
 ************************************
+*Calcluating indicators
+
+// tab nocft , m
+// tab singleb , m
+// tab taxhav2 , m
+// tab corr_decp, m
+// tab corr_submp , m
+// tab corr_proc, m
+
+*For indicators with 1 category - transformed to the integrity version
+
+foreach var of varlist nocft singleb taxhav2 corr_submp corr_decp corr_proc {
+// tab `var', m
+gen ind_`var'_val = 0
+replace ind_`var'_val = 0 if `var'==1
+replace ind_`var'_val = 100 if `var'==0
+replace ind_`var'_val =. if missing(`var') | `var'==99
+replace ind_`var'_val = .  if  `var'==9  //tax haven undefined
+}
+gen ind_corr_ben_val = .
+
+// tab ind_nocft_val  nocft, m
+// tab ind_singleb_val  singleb, m
+// tab ind_taxhav2_val  taxhav2, m
+// tab ind_corr_submp_val  corr_submp, m
+
+*Contract Share
+// sum w_ycsh4
+gen ind_csh_val = w_ycsh4*100
+replace ind_csh_val = 100-ind_csh_val
+
+************************************
+*Transparency Indicators
+
+// br tender_addressofimplementation_n tender_nationalproceduretype tender_publications_firstdcontra
+// gen title =lot_title
+// replace title = tender_title if missing(title)
+gen impl= tender_addressofimplementation_n
+gen proc = tender_nationalproceduretype
+gen aw_date2 = tender_publications_firstdcontra
+gen bids =lot_bidscount
+foreach var of varlist buyer_name title bidder_name tender_supplytype bid_price impl proc bids aw_date2  {
+gen ind_tr_`var'_val = 0
+replace  ind_tr_`var'_val = 100 if !missing(`var')
+}
+cap drop  impl proc aw_date2  bids
+************************************
+*Competition Indicators
+
+gen ind_comp_bidder_mkt_share_val = bidder_mkt_share*100
+gen ind_comp_bids_count_val = bids_count
+
+foreach var of varlist bidder_mkt_entry bidder_non_local  {
+gen ind_comp_`var'_val = 0
+replace ind_comp_`var'_val = 0 if `var'==0
+replace ind_comp_`var'_val = 100 if `var'==1
+replace ind_comp_`var'_val =. if missing(`var') | `var'==99
+}
+********************************************************************************
+
 *Keeping variables required for the reverse flatten tool
 
-keep tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_contractsignaturedate tender_biddeadline tender_proceduretype tender_supplytype tender_publications_notice_type tender_publications_firstcallfor  notice_url  source tender_publications_award_type  tender_publications_firstdcontra  tender_publications_lastcontract  buyer_masterid buyer_id buyer_city buyer_postcode buyer_country buyer_geocodes buyer_name  buyer_buyertype buyer_mainactivities tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_country bidder_geocodes bidder_name bid_priceUsd bid_price bid_pricecurrency bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name lot_productCode lot_localProductCode_type lot_localProductCode title bids_count tender_estimatedpriceUsd tender_estimatedprice ten_est_pricecurrency ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav2_val ind_taxhav2_type ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type
+keep tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_contractsignaturedate tender_biddeadline tender_proceduretype tender_nationalproceduretype tender_supplytype tender_publications_notice_type tender_publications_firstcallfor  notice_url  source tender_publications_award_type  tender_publications_firstdcontra  tender_publications_lastcontract  buyer_masterid buyer_id buyer_city buyer_postcode buyer_country buyer_geocodes buyer_name  buyer_buyertype buyer_mainactivities tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_country bidder_geocodes bidder_name bid_priceUsd bid_price bid_pricecurrency lot_productCode lot_localProductCode_type lot_localProductCode title  tender_estimatedpriceUsd tender_estimatedprice ten_est_pricecurrency ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav2_val ind_taxhav2_type decp ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type submp ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type ind_comp_bidder_mkt_share_val ind_comp_bidder_mkt_share_type ind_comp_bids_count_val ind_comp_bids_count_type ind_comp_bidder_mkt_entry_val ind_comp_bidder_mkt_entry_type ind_comp_bidder_non_local_val ind_comp_bidder_non_local_type is_capital 
+
+*bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name 
 ************************************
 *Ordering variables required for the reverse flatten tool
 
-order tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_contractsignaturedate tender_biddeadline tender_proceduretype tender_supplytype tender_publications_notice_type tender_publications_firstcallfor  notice_url  source tender_publications_award_type  tender_publications_firstdcontra  tender_publications_lastcontract  buyer_masterid buyer_id buyer_city buyer_postcode buyer_country buyer_geocodes buyer_name  buyer_buyertype buyer_mainactivities tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_country bidder_geocodes bidder_name bid_priceUsd bid_price bid_pricecurrency bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name lot_productCode lot_localProductCode_type lot_localProductCode title bids_count tender_estimatedpriceUsd tender_estimatedprice ten_est_pricecurrency ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav2_val ind_taxhav2_type ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type
-********************************************************************************
+order tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_contractsignaturedate tender_biddeadline tender_proceduretype tender_nationalproceduretype tender_supplytype tender_publications_notice_type tender_publications_firstcallfor  notice_url  source tender_publications_award_type  tender_publications_firstdcontra  tender_publications_lastcontract  buyer_masterid buyer_id buyer_city buyer_postcode buyer_country buyer_geocodes buyer_name  buyer_buyertype buyer_mainactivities tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_country bidder_geocodes bidder_name bid_priceUsd bid_price bid_pricecurrency lot_productCode lot_localProductCode_type lot_localProductCode title  tender_estimatedpriceUsd tender_estimatedprice ten_est_pricecurrency ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav2_val ind_taxhav2_type decp ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type submp ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type ind_comp_bidder_mkt_share_val ind_comp_bidder_mkt_share_type ind_comp_bids_count_val ind_comp_bids_count_type ind_comp_bidder_mkt_entry_val ind_comp_bidder_mkt_entry_type ind_comp_bidder_non_local_val ind_comp_bidder_non_local_type is_capital 
 
-export delimited "${country_folder}/`country'_mod.csv", replace
+********************************************************************************
+export delimited "${utility_data}/country/`country'/`country'_mod.csv", replace
+********************************************************************************
+*Clean up
+copy "${country_folder}/`country'_wb_1020.dta" "${utility_data}/country/`country'/`country'_wb_1020.dta", replace
+local files : dir  "${country_folder}" files "*.dta"
+foreach file in `files' {
+cap erase "${country_folder}/`file'"
+}
+cap erase "${country_folder}/buyers_for_R.csv"
 ********************************************************************************
 *END

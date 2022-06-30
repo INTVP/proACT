@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script performs several post processing operations to prepare the data for
 the reverse flatten tool.
@@ -12,183 +6,45 @@ the reverse flatten tool.
 2) Tidy variables for reverse flatten tool
 3) Exports select variable for the reverse flatten tool*/
 ********************************************************************************
-
 *Data
-use $country_folder/wb_cri_cl_201124.dta, clear
+
+use "${country_folder}/`country'_wb_2011.dta", clear
 ********************************************************************************
 *Note - The compiled dataset was used for an earlier project - most of the data preperation work such as renaming variables where done in an older script. I will copy here all the relevent parts of the script and leave them commented
 *The parts that are not commented are relevent for the ProAct project
 ********************************************************************************
-
-*Calcluating indicators
-tab singleb , m 
-tab corr_ben2, m
-tab nocft, m
-tab corr_proc, m 
-
-foreach var of varlist singleb corr_ben2 nocft corr_proc {
-tab `var', m
-gen ind_`var'_val = 0 
-replace ind_`var'_val = 0 if `var'==1
-replace ind_`var'_val = 100 if `var'==0
-replace ind_`var'_val =. if missing(`var') | `var'==99
-replace ind_`var'_val = 9  if  `var'==9  //tax haven undefined
-}
-tab ind_singleb_val  singleb, m
-tab ind_corr_ben2_val  corr_ben2, m
-tab ind_nocft_val  nocft, m
-tab ind_corr_proc_val corr_proc, m
-************************************
-
-tab corr_submp, m 
-tab corr_decp, m
-tab corr_wpr, m
-tab corr_awcrit, m
-foreach var of varlist corr_submp corr_wpr corr_awcrit corr_decp {
-tab `var', m
-gen ind_`var'_val = 0 if `var'==2
-replace ind_`var'_val = 50 if `var'==1
-replace ind_`var'_val = 100 if `var'==0
-replace ind_`var'_val =. if missing(`var') | `var'==99
-}
-tab ind_corr_submp_val  corr_submp, m
-tab ind_corr_wpr_val  corr_wpr, m
-tab ind_corr_decp_val  corr_decp, m
-tab ind_corr_awcrit_val  corr_awcrit, m
-************************************
-
-*Contract Share
-gen proa_ycsh4=proa_ycsh if filter_ok==1 & proa_ynrc>4 & proa_ycsh!=.
-sum proa_ycsh4 proa_ycsh
-
-sum proa_ycsh4
-gen ind_csh_val = proa_ycsh4*100
-replace ind_csh_val = 100-ind_csh_val
-*replace ind_csh_status = "INSUFFICIENT DATA" if missing(w_ycsh)
-*replace ind_csh_status = "UNDEFINED" if missing(w_ycsh4) & !missing(w_ycsh)
-************************************
-
-*Transparency
-gen impl= tender_addressofimplementation_n
-gen proc = tender_nationalproceduretype
-gen aw_date2 = tender_publications_firstdcontra
-
-rename anb_name buyer_name
-rename w_name bidder_name
-gen bid_price=ca_contract_value 
-rename ca_procedure proc 
-rename aw_dec_date aw_date2
-decode anb_city, gen(impl)
-replace impl= proper(impl)
-
-foreach var of varlist buyer_name bidder_name bid_price impl proc aw_date2 {
-gen ind_tr_`var'_val = 0
-replace  ind_tr_`var'_val = 100 if !missing(`var') 
-}
-drop  impl proc aw_date2
-
-gen ind_tr_bids_val = 0 if ca_nrbid==.
-replace ind_tr_bids_val= 100 if ca_nrbid!=.
-
-*rename tr_aw_date2 ind_tr_aw_date2_val
-
-********************************************************************************
-save  $country_folder/wb_cri_cl_201124.dta, replace 
-********************************************************************************
 *Fixing variables for reverse tool
+********************************************************************************
+*Generate tender country
 
 gen tender_country = "CL"
 ************************************
 
 *Is source is "https://tenders.procurement.gov.ge"
 *then notice_url is also tender_publications_lastcontract
-br notice_url tender_publications_firstcallfor tender_publications_lastcontract tender_publications_firstdcontra
+// br notice_url tender_publications_firstcallfor tender_publications_lastcontract tender_publications_firstdcontra
 
 cap drop tender_publications_notice_type tender_publications_award_type
 gen tender_publications_notice_type = "CONTRACT_NOTICE" if !missing(cft_date_first)
-gen tender_publications_award_type = "CONTRACT_AWARD" if !missing(aw_date2)
+gen tender_publications_award_type = "CONTRACT_AWARD" if !missing(aw_date)
 
-br tender_publications_notice_type notice_url tender_publications_firstcallfor tender_publications_award_type tender_publications_lastcontract tender_publications_firstdcontra
+// br tender_publications_notice_type notice_url tender_publications_firstcallfor tender_publications_award_type tender_publications_lastcontract tender_publications_firstdcontra
 ************************************
+*Buyer type for reverse flatten tool
 
-*rename buyer_NUTS3 buyer_geocodes
-rename buyer_nuts2 buyer_nuts2_orig
-tab buyer_nuts, m
-gen buyer_nuts_len = length(buyer_nuts)
-tab buyer_nuts_len, m
-gen buyer_nuts2 = ""
-bys buyer_nuts_len: replace buyer_nuts2 = buyer_nuts + "0000" if buyer_nuts_len== 1
-bys buyer_nuts_len: replace buyer_nuts2 = buyer_nuts + "000" if buyer_nuts_len== 2
-bys buyer_nuts_len: replace buyer_nuts2 = buyer_nuts + "00" if buyer_nuts_len== 3
-bys buyer_nuts_len: replace buyer_nuts2 = buyer_nuts + "0" if buyer_nuts_len== 4
-bys buyer_nuts_len: replace buyer_nuts2 = buyer_nuts  if buyer_nuts_len== 5
-br buyer_nuts2 buyer_nuts buyer_nuts_len if buyer_nuts_len!=0
-tab buyer_nuts2
-drop buyer_nuts
-rename buyer_nuts2 buyer_nuts
-
-gen  buyer_geocodes = "["+ `"""' + buyer_nuts + `"""' +"]"
-drop buyer_nuts_len
-replace buyer_geocodes="" if buyer_nuts==""
-*if buyer nuts is missing it shoud be empty
-*for bidder and impl also
+gen buyer_buyertype = "NATIONAL_AUTHORITY" if anb_type=="national authority"
+replace buyer_buyertype = "NATIONAL_AGENCY" if anb_type=="independent agency"
+replace buyer_buyertype = "REGIONAL_AUTHORITY" if anb_type=="regional authority"
+replace buyer_buyertype = "REGIONAL_AGENCY" if anb_type=="local body"
+replace buyer_buyertype = "PUBLIC_BODY" if anb_type=="armed forces"
+replace buyer_buyertype = "OTHER" if anb_type=="national banks and funds" | anb_type=="other"| anb_type=="state owned company"
 ************************************
-
-*Fixing IMPL nuts
-tab tender_addressofimplementation_n, m
-gen imp_nuts_len = length(tender_addressofimplementation_n)
-tab imp_nuts_len, m
-gen imp_nuts2 = ""
-bys imp_nuts_len: replace imp_nuts2 = tender_addressofimplementation_n + "0000" if imp_nuts_len== 1
-bys imp_nuts_len: replace imp_nuts2 = tender_addressofimplementation_n + "000" if imp_nuts_len== 2
-bys imp_nuts_len: replace imp_nuts2 = tender_addressofimplementation_n + "00" if imp_nuts_len== 3
-bys imp_nuts_len: replace imp_nuts2 = tender_addressofimplementation_n + "0" if imp_nuts_len== 4
-bys imp_nuts_len: replace imp_nuts2 = tender_addressofimplementation_n  if imp_nuts_len== 5
-br imp_nuts2 tender_addressofimplementation_n imp_nuts_len if imp_nuts_len!=0
-tab imp_nuts2
-drop buyer_nuts
-rename imp_nuts2 imp_nuts
-
-gen tender_addressofimplementation_c = substr(imp_nuts,1,2) 
-gen  tender_addressofimplementation_c = "["+ `"""' + tender_addressofimplementation_n + `"""' +"]"
-replace tender_addressofimplementation2="" if imp_nuts==""
-drop tender_addressofimplementation_n
-rename tender_addressofimplementation2 tender_addressofimplementation_n
-tab tender_addressofimplementation_n, m
-tab tender_addressofimplementation_c, m
-drop imp_nuts
-************************************
-
-*Fixing Bidder nuts
-tab bidder_nuts, m
-replace bidder_nuts="" if bidder_nuts=="00"
-
-gen bidder_nuts_len = length(bidder_nuts)
-tab bidder_nuts_len, m
-gen bidder_nuts2 = ""
-bys bidder_nuts_len: replace bidder_nuts2 = bidder_nuts + "0000" if bidder_nuts_len== 1
-bys bidder_nuts_len: replace bidder_nuts2 = bidder_nuts + "000" if bidder_nuts_len== 2
-bys bidder_nuts_len: replace bidder_nuts2 = bidder_nuts + "00" if bidder_nuts_len== 3
-bys bidder_nuts_len: replace bidder_nuts2 = bidder_nuts + "0" if bidder_nuts_len== 4
-bys bidder_nuts_len: replace bidder_nuts2 = bidder_nuts  if bidder_nuts_len== 5
-count if missing(bidder_nuts)
-count if missing(bidder_nuts2)
-br bidder_nuts2 bidder_nuts bidder_nuts_len if bidder_nuts_len!=0
-tab bidder_nuts2
-drop bidder_nuts bidder_nuts_len
-gen bidder_nuts_len = length(bidder_nuts)
-tab bidder_nuts_len, m
-drop bidder_nuts_len
-rename bidder_nuts2 bidder_nuts
-tab bidder_nuts
-
-gen  bidder_geocodes = "["+ `"""' + bidder_nuts + `"""' +"]"
-replace bidder_geocodes="" if bidder_nuts==""
-************************************
-
 *year-month-day as a string 
 
-foreach var of varlist cft_date_first cft_date_last aw_date aw_date2 cft_deadline {
+foreach var of varlist cft_date_first cft_date_last aw_date cft_deadline {
+	gen `var'_2 = date(`var',"DMY")
+	drop `var'
+	rename `var'_2 `var'
 	gen dayx = string(day(`var'))
 	gen monthx = string(month(`var'))
 	gen yearx = string(year(`var'))
@@ -202,220 +58,17 @@ foreach var of varlist cft_date_first cft_date_last aw_date aw_date2 cft_deadlin
 	drop `var'
 	rename `var'_str `var'
 }
-************************************
-
-gen  buyer_mainactivities2 = "["+ `"""' + buyer_mainactivities + `"""' +"]"
-drop buyer_mainactivities
-rename buyer_mainactivities2 buyer_mainactivities
-************************************
-
-*Export prevsanct and has sanct anyway
-gen bidder_previousSanction = "false"
-gen bidder_hasSanction = "false"
-gen sanct_startdate = ""
-gen sanct_enddate = ""
-gen sanct_name = ""
-************************************
-rename bid_price_ppp bid_priceUsd
-rename tender_finalprice_ppp tender_finalpriceUsd
-rename lot_estimatedprice_ppp  lot_estimatedpriceUsd
-rename tender_estimatedprice_ppp tender_estimatedpriceUsd
-gen bid_pricecurrency  = currency
-gen ten_est_pricecurrency = currency
-gen lot_est_pricecurrency = currency
-************************************
-
-rename cpv_div lot_productCode
-gen lot_localProductCode =  cpv_div
-replace lot_localProductCode = substr(lot_localProductCode,1,2)
-gen lot_localProductCode_type = "CPV2008" if !missing(lot_localProductCode)
-************************************
-
-br tender_title lot_title
-gen title = lot_title
-replace title = tender_title if missing(title)
-************************************
-
-br tender_recordedbidscount lot_bidscount
-gen bids_count = ca_nrbid
-*replace bids_count = tender_recordedbidscount if missing(bids_count)
-************************************
-
-*Exporting for the rev flatten tool\
-
-*Indicators
-gen ind_corr_proc_val= c_INTEGRITY_PROCEDURE_TYPE
-gen ind_corr_submp_val = c_INTEGRITY_ADVERTISEMENT_PERIOD
-gen ind_corr_decp_val = c_INTEGRITY_DECISION_PERIOD
-gen ind_nocft_val = c_INTEGRITY_CALL_FOR_TENDER_PUB
-gen ind_singleb_val = c_INTEGRITY_SINGLE_BID
-gen ind_csh_val = c_INTERGIRTY_WINNER_SHARE
-gen ind_corr_ben2_val =c_INTEGRITY_BENFORD
-************************************
-
-*rename tr_tender_title c_TRANSPARENCY_TITLE_MISSING
-gen c_TRANSPARENCY_VALUE_MISSING=ind_tr_bid_price_val
-gen c_TRANSPARENCY_IMP_LOC_MISSING=ind_tr_impl_val
-gen  c_TRANSPARENCY_BID_NR_MISSING=ind_tr_bids_val
-gen  c_TRANSPARENCY_BUYER_NAME_MIS=ind_tr_buyer_name_val
-gen  c_TRANSPARENCY_BIDDER_NAME_MIS=ind_tr_bidder_name_val
-*gen  c_TRANSPARENCY_SUPPLY_TYPE_MIS=""
-gen  c_TRANSPARENCY_PROC_METHOD_MIS=ind_tr_proc_val
-gen  c_TRANSPARENCY_AWARD_DATE_MIS=ind_tr_aw_date2_val
-************************************
-
-rename buyer_district_api buyer_district
-rename buyer_city_api buyer_city
-rename buyer_county_api buyer_county
-rename buyer_NUTS3 buyer_nuts3
-************************************
-
-rename bid_price_ppp bid_price_netAmountUsd
-************************************
-
-reshape long c_ , i(tender_id proa_ycsh proa_ycsh4 taxhav2 ) j(indicator, string)
-
-*rename c_ tender_indicator_value
-*rename indicator tender_indicator_type
-*br tender_indicator_type tender_indicator_value
-
-*Fixing Transparency indicators first
-replace tender_indicator_type="TRANSPARENCY_BUYER_NAME_MISSING" if tender_indicator_type=="TRANSPARENCY_BUYER_NAME_MIS"
-replace tender_indicator_type="TRANSPARENCY_BIDDER_NAME_MISSING" if tender_indicator_type=="TRANSPARENCY_BIDDER_NAME_MIS"
-replace tender_indicator_type="TRANSPARENCY_SUPPLY_TYPE_MISSING" if tender_indicator_type=="TRANSPARENCY_SUPPLY_TYPE_MIS"
-replace tender_indicator_type="TRANSPARENCY_PROC_METHOD_MISSING" if tender_indicator_type=="TRANSPARENCY_PROC_METHOD_MIS"
-replace tender_indicator_type="TRANSPARENCY_AWARD_DATE_MISSING" if tender_indicator_type=="TRANSPARENCY_AWARD_DATE_MIS"
-************************************
-
-*Calculating  status
-
-
-*replace ind_csh_status = "INSUFFICIENT DATA" if missing(w_ycsh)
-*replace ind_csh_status = "UNDEFINED" if missing(w_ycsh4) & !missing(w_ycsh)
- 
-*undefined if tax haven ==9 
-gen ind_nocft_type = "INTEGRITY_CALL_FOR_TENDER_PUBLICATION"
-gen ind_singleb_type = "INTEGRITY_SINGLE_BID"
-*gen ind_taxhav2_type = "INTEGRITY_TAX_HAVEN"
-gen ind_corr_proc_type = "INTEGRITY_PROCEDURE_TYPE"
-gen ind_corr_submp_type = "INTEGRITY_ADVERTISEMENT_PERIOD"
-gen ind_corr_decp_type = "INTEGRITY_DECISION_PERIOD"
-gen ind_corr_ben_type = "INTEGRITY_BENFORD"
-gen ind_csh_type = "INTEGRITY_WINNER_SHARE"
-gen ind_tr_buyer_name_type = "TRANSPARENCY_BUYER_NAME_MISSING"
-*gen ind_tr_tender_title_type = "TRANSPARENCY_TITLE_MISSING" 
-gen ind_tr_bidder_name_type = "TRANSPARENCY_BIDDER_NAME_MISSING"
-*gen ind_tr_tender_supplytype_type = "TRANSPARENCY_SUPPLY_TYPE_MISSING" 
-gen ind_tr_bid_price_type = "TRANSPARENCY_VALUE_MISSING" 
-gen ind_tr_impl_type = "TRANSPARENCY_IMP_LOC_MISSING" 
-gen ind_tr_proc_type = "TRANSPARENCY_PROC_METHOD_MISSING"
-gen ind_tr_bids_type = "TRANSPARENCY_BID_NR_MISSING"
-gen ind_tr_aw_date2_type = "TRANSPARENCY_AWARD_DATE_MISSING"
-
-
-gen tender_indicator_status = "INSUFFICIENT DATA" if inlist(tender_indicator_value,99,999,.)
-replace tender_indicator_status = "CALCULATED" if missing(tender_indicator_status)
-replace tender_indicator_value=. if inlist(tender_indicator_value,99,999,.)
-
-gen buyer_indicator_value=.
-gen buyer_indicator_type = "INTEGRITY_BENFORD"
-rename corr_ben2 buyer_indicator_value
-gen buyer_indicator_status = "INSUFFICIENT DATA" if inlist(buyer_indicator_value,99,.)
-replace buyer_indicator_status = "CALCULATED" if missing(buyer_indicator_status)
-replace buyer_indicator_value=. if inlist(buyer_indicator_value,99,999,.)
-************************************
-decode bid_iswinning, replace
-foreach var of varlist bid_iswinning bidder_hasSanction bidder_previousSanction {
-replace `var' = lower(`var')
-replace `var' = "true" if inlist(`var',"true","t")
-replace `var' = "false" if inlist(`var',"false","f")
-}
-************************************
-rename anb_id_str buyer_id
-rename bidder_id
-************************************
-
-foreach var of varlist buyer_id bidder_id {
-tostring `var', replace
-replace `var' = "" if `var'=="."
-}
-br  buyer_id bidder_id
-
-********************************************************************************
-save  $country_folder/wb_cri_cl_201124.dta, replace 
-********************************************************************************
-
-*Fixing variables for the rev flatten tool\
-
-rename ten_id tender_id
-sort tender_id lot_row_nr
-************************************
-
-tab bid_iswinning, m
-gen miss_bidder=missing(bidder_name)
-tab miss_bidder if missing(bid_iswinning), m //all bidder names are missing if bid_iswinning is missing
-br  tender_id tender_lotscount lot_row_nr bid_iswinning tender_isframe bid_iscons tender_title bidder_name bid_price *cons* if missing(bid_iswinning)
-************************************
-
-*drop if missing(tender_publications_lastcontract)
-drop if missing(bidder_name)
-************************************
-
-bys tender_id: gen x=_N
-format tender_title  bidder_name  tender_publications_lastcontract  %15s
-br x ten_id tender_lotscount lot_row_nr bid_iswinning tender_isframe bid_iscons tender_title bidder_name bid_price *cons* if x>1
-
-*RULE: use tender_isframework: if true 1 lot , f or missing count lots by grouping tender_id
-*count if missing(tender_lotscount)
-gen lot_number = 1 if tender_isframework=="t" & missing(lot_row_nr)
-gen lot_number = lot_row_nr
-bys tender_id: replace lot_number=_n if tender_isframework!="t"
-count if missing(lot_number)
-
-sort  tender_id  lot_number
-br x tender_id tender_lotscount lot_row_nr lot_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price if x>1
-*OK
-************************************
-
-*Bid number: Rule;
-bys tender_id lot_number: gen bid_number=_n
-br x tender_id tender_lotscount lot_row_nr lot_number bid_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1 & tender_lotscount==1
-
-br x tender_id tender_lotscount lot_row_nr lot_number bid_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1 & tender_lotscount!=1 & tender_isframework=="t"
-*OK
-************************************
-
-decode proc, gen(tender_proceduretype)
-
-gen buyer_buyertype = "NATIONAL_AUTHORITY" if anb_type==4
-replace buyer_buyertype = "NATIONAL_AGENCY" if anb_type==2
-replace buyer_buyertype = "REGIONAL_AUTHORITY" if anb_type==7
-replace buyer_buyertype = "REGIONAL_AGENCY" if anb_type==3
-replace buyer_buyertype = "PUBLIC_BODY" if anb_type==1 
-replace buyer_buyertype = "OTHER" if anb_type==5 | anb_type==6 | anb_type==8
-************************************
 
 rename aw_date tender_awarddecisiondate
 rename cft_deadline tender_biddeadline
 rename cft_date_first tender_publications_firstcallfor
 gen tender_publications_firstdcontra=tender_awarddecisiondate
-rename anb_id_str buyer_id
-decode anb_id_addid, gen(buyer_masterid)
-rename anb_citystr buyer_city
-rename w_idstr bidder_id
-decode w_id_addid, gen(bidder_masterid)
 ************************************
+* Buyer locations
 
-*Fixing Buyer locations
-
-decode anb_city, gen(anb_citystr)
-replace anb_citystr =proper(anb_citystr)
-cap drop _m
-merge m:m anb_citystr using $utility_data/country/CL/CL_city.dta, keep(1 3) 
-drop _m
-*https://en.wikipedia.org/wiki/Provinces_of_Chile
-
-gen x = "CL" if !missing(anb_citystr)
+*Generating a nuts like variable
+gen x = "CL" if !missing(anb_city)
+replace x ="" if x=="."
 *Generating a new grouping for regions
 gen y = .
 replace y = 1 if inlist(anb_region,"Arica and Parinacota Region","Tarapaca","Antofagasta","Atacama","Coquimbo")
@@ -435,59 +88,249 @@ replace z=6 if anb_region=="Santiago Metropolitan Region"
 tostring z, replace
 replace z ="" if z=="."
 
+//
+// local temp ""Arica and Parinacota Region" "Tarapaca" "Antofagasta" "Atacama" "Coquimbo" "Valparaiso" "O'Higgins" "Maule" "Biobio" "Santiago Metropolitan" "Santiago Metropolitan Region" "Araucania" "Los Rios" "Los Lagos" "Aysen" "Magallanes""
+// local temp2 ""1" "2" "3" "4" "5" "1" "2" "3" "4" "5" "6" "1" "2" "3" "4" "5""
+// local n_temp : word count `temp'
+// gen z=""
+// forval s=1/`n_temp'{
+//  replace z = "`: word `s' of `temp2''" if anb_region=="`: word `s' of `temp''"
+// }
+// bys anb_region: egen alpha = nvals(anb_citystr)
+// tab alpha //max 7
+// bys anb_region anb_citystr: gen yy = _n==1
 
-local temp ""Arica and Parinacota Region" "Tarapaca" "Antofagasta" "Atacama" "Coquimbo" "Valparaiso" "O'Higgins" "Maule" "Biobio" "Santiago Metropolitan" "Santiago Metropolitan Region" "Araucania" "Los Rios" "Los Lagos" "Aysen" "Magallanes""
-local temp2 ""1" "2" "3" "4" "5" "1" "2" "3" "4" "5" "6" "1" "2" "3" "4" "5""
-local n_temp : word count `temp'
-gen z=""
-forval s=1/`n_temp'{
- replace z = "`: word `s' of `temp2''" if anb_region=="`: word `s' of `temp''"
-}
-bys anb_region: egen alpha = nvals(anb_citystr)
-tab alpha //max 7
-bys anb_region anb_citystr: gen yy = _n==1
+// gsort anb_region -anb_citystr
+// bys anb_region yy : gen xx = _n if yy==1 & !missing(anb_citystr)
+// sort anb_region anb_citystr xx 
+// bys anb_region anb_citystr: replace xx = xx[1]  if missing(xx)
+// tostring xx, replace
+// replace xx="" if xx=="."
+// br anb_region anb_citystr yy if yy==1
 
-gsort anb_region -anb_citystr
-bys anb_region yy : gen xx = _n if yy==1 & !missing(anb_citystr)
-sort anb_region anb_citystr xx 
-bys anb_region anb_citystr: replace xx = xx[1]  if missing(xx)
-tostring xx, replace
-replace xx="" if xx=="."
-br anb_region anb_citystr yy if yy==1
-
-tostring z, replace
 
 gen buyer_geocodes=x+y+z
 replace buyer_geocodes = subinstr(buyer_geocodes, ".", "", .)
+replace  buyer_geocodes = "["+ `"""' + buyer_geocodes + `"""' +"]" if !missing(buyer_geocodes)
 
-drop _merge x y z alpha yy xx
+gen tender_addressofimplementation_n = buyer_geocodes
+gen tender_addressofimplementation_c = "CL" if !missing(anb_city)
+
+gen buyer_country = tender_addressofimplementation_c
+
+cap drop _merge 
+cap drop x 
+cap drop y 
+cap drop z 
+cap drop alpha 
+cap drop yy 
+cap drop xx
+
+replace anb_city =proper(anb_city)
 ************************************
+
+rename bid_price_ppp bid_priceUsd
+rename tender_finalprice_ppp tender_finalpriceUsd
+gen bid_pricecurrency  = currency
+
+************************************
+
+generate lot_productCode =  cpv_div + "000000" if !missing(cpv_div)
+gen lot_localProductCode =  tender_unspsc_original
+gen lot_localProductCode_type = "UNSPSC" if !missing(lot_localProductCode)
+************************************
+
+gen ind_nocft_type = "INTEGRITY_CALL_FOR_TENDER_PUBLICATION"
+gen ind_singleb_type = "INTEGRITY_SINGLE_BID"
+gen ind_taxhav2_type = "INTEGRITY_TAX_HAVEN"
+gen ind_corr_proc_type = "INTEGRITY_PROCEDURE_TYPE"
+gen ind_corr_submp_type = "INTEGRITY_ADVERTISEMENT_PERIOD"
+gen ind_corr_decp_type = "INTEGRITY_DECISION_PERIOD"
+gen ind_corr_ben_type = "INTEGRITY_BENFORD"
+gen ind_csh_type = "INTEGRITY_WINNER_SHARE"
+
+gen ind_tr_buyer_name_type = "TRANSPARENCY_BUYER_NAME_MISSING"
+gen ind_tr_tender_title_type = "TRANSPARENCY_TITLE_MISSING" 
+gen ind_tr_bidder_name_type = "TRANSPARENCY_BIDDER_NAME_MISSING"
+gen ind_tr_tender_supplytype_type = "TRANSPARENCY_SUPPLY_TYPE_MISSING" 
+gen ind_tr_bid_price_type = "TRANSPARENCY_VALUE_MISSING" 
+gen ind_tr_impl_type = "TRANSPARENCY_IMP_LOC_MISSING" 
+gen ind_tr_proc_type = "TRANSPARENCY_PROC_METHOD_MISSING"
+gen ind_tr_bids_type = "TRANSPARENCY_BID_NR_MISSING"
+gen ind_tr_aw_date2_type = "TRANSPARENCY_AWARD_DATE_MISSING"
+
+gen ind_comp_bidder_mkt_entry_type = "COMPETITION_SUPPLIER_MARKET_ENTRY"
+gen ind_comp_bidder_non_local_type = "COMPETITION_NON_LOCAL_SUPPLIER"
+gen ind_comp_bidder_mkt_share_type = "COMPETITION_SUPPLIER_MARKET_SHARE"
+gen ind_comp_bids_count_type = "COMPETITION_NUMBER_OF_BIDDERS"
+
+
+************************************
+foreach var of varlist bid_iswinning {
+replace `var' = lower(`var')
+replace `var' = "true" if inlist(`var',"true","t")
+replace `var' = "false" if inlist(`var',"false","f")
+}
+
+foreach var of varlist anb_city {
+replace `var' = proper(`var')
+}
+
+foreach var of varlist anb_name w_name {
+replace `var' = ustrupper(`var')
+}
+
+rename anb_id_addid buyer_masterid
+rename anb_id buyer_id
+rename w_id_addid bidder_masterid
+rename w_id bidder_id
+foreach var of varlist buyer_id bidder_id {
+tostring `var', replace
+replace `var' = "" if `var'=="."
+}
+************************************
+*Calcluating indicators
+
+cap drop nocft
+gen nocft = nocft_nocomp
+
+foreach var of varlist singleb corr_proc nocft  {
+// tab `var', m
+gen ind_`var'_val = 0 
+replace ind_`var'_val = 0 if `var'==1
+replace ind_`var'_val = 100 if `var'==0
+replace ind_`var'_val =. if missing(`var') | `var'==99
+replace ind_`var'_val = 9  if  `var'==9  //tax haven undefined
+}
+gen ind_corr_ben_val = .
+gen ind_taxhav_val = .
+
+foreach var of varlist corr_submp corr_decp {
+// tab `var', m
+gen ind_`var'_val = 0 if `var'==2
+replace ind_`var'_val = 50 if `var'==1
+replace ind_`var'_val = 100 if `var'==0
+replace ind_`var'_val =. if missing(`var') | `var'==99
+}
+
+*Contract Share
+
+// sum proa_ycsh9
+gen ind_csh_val = proa_ycsh9*100
+replace ind_csh_val = 100-ind_csh_val
+************************************
+*Transparency
+
+cap drop impl
+gen impl= tender_addressofimplementation_n
+gen aw_date2 = tender_awarddecisiondate
+gen bids = ca_nrbid
+gen title = .
+gen tender_supplytype = .
+gen proc = ca_procedure
+
+rename anb_name buyer_name
+rename w_name bidder_name
+gen bid_price=ca_contract_value 
+
+foreach var of varlist buyer_name title bidder_name bid_price tender_supplytype impl proc bids aw_date2 {
+gen ind_tr_`var'_val = 0
+replace  ind_tr_`var'_val = 100 if !missing(`var') 
+}
+drop  impl proc aw_date2 bids 
+************************************
+*Competition Indicators
+
+gen ind_comp_bidder_mkt_share_val = bidder_mkt_share*100
+gen ind_comp_bids_count_val = ca_nrbid
+
+foreach var of varlist bidder_mkt_entry bidder_non_local  {
+gen ind_comp_`var'_val = 0
+replace ind_comp_`var'_val = 0 if `var'==0
+replace ind_comp_`var'_val = 100 if `var'==1
+replace ind_comp_`var'_val =. if missing(`var') | `var'==99
+}
+********************************************************************************
+* Adding all missing variables
+
+// gen bidder_geocodes = .
+// gen tender_addressofimplementation_c = .
+// gen tender_addressofimplementation_n = .
+//
+// gen buyer_mainactivities2 = .
+//
+// gen lot_estimatedpriceUsd = .
+// gen tender_estimatedpriceUsd = .
+// gen ten_est_pricecurrency = .
+//
+// gen tender_nationalproceduretype = .
+gen tender_proceduretype=ca_procedure
 
 gen source="https://www.mercadopublico.cl/"
-replace  buyer_geocodes = "["+ `"""' + buyer_geocodes + `"""' +"]"
-replace lot_productCode = lot_productCode + "000000"
-************************************
-
-keep tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_biddeadline tender_proceduretype tender_publications_notice_type tender_publications_firstcallfor  source tender_publications_award_type  tender_publications_firstdcontra  buyer_masterid buyer_id buyer_city buyer_geocodes buyer_name  buyer_buyertype bidder_masterid bidder_id bidder_name bid_priceUsd bid_price bid_pricecurrency bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name lot_productCode lot_localProductCode_type lot_localProductCode bids_count ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type ind_corr_submp_val ind_corr_submp_type ind_corr_ben2_val ind_corr_ben_type ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type 
-************************************
-
-order tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate tender_biddeadline tender_proceduretype tender_publications_notice_type tender_publications_firstcallfor  source tender_publications_award_type  tender_publications_firstdcontra  buyer_masterid buyer_id buyer_city buyer_geocodes buyer_name  buyer_buyertype bidder_masterid bidder_id bidder_name bid_priceUsd bid_price bid_pricecurrency bidder_previousSanction bidder_hasSanction sanct_startdate sanct_enddate sanct_name lot_productCode lot_localProductCode_type lot_localProductCode bids_count ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type ind_corr_submp_val ind_corr_submp_type ind_corr_ben2_val ind_corr_ben_type ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type 
 ********************************************************************************
 
-*Implementing some fixes
+save "${country_folder}/`country'_wb_2011.dta", replace
+********************************************************************************
+*Fixing variables for the rev flatten tool\
 
-foreach var in buyer_geocodes buyer_country{
+rename ten_id tender_id
+sort tender_id lot_row_nr
+************************************
 
-replace `var' = ustrregexra(`var',`"""'," ")
-
-foreach char in [ ] {
-di "`char'"
-replace `var' = ustrregexra(`var',"`char'"," ")
-}
-}
+// tab bid_iswinning, m
+gen miss_bidder=missing(bidder_name)
+// tab miss_bidder if missing(bid_iswinning), m //all bidder names are missing if bid_iswinning is missing
+// br  tender_id tender_lotscount lot_row_nr bid_iswinning tender_isframe bid_iscons tender_title bidder_name bid_price *cons* if missing(bid_iswinning)
+************************************
+*drop if missing(tender_publications_lastcontract)
+drop if missing(bidder_name)
 drop if missing(bidder_masterid)
+drop if missing(buyer_masterid)
+
+drop if filter_ok==0
+************************************
+
+bys tender_id: gen x=_N
+// format tender_title  bidder_name  tender_publications_lastcontract  %15s
+// br x ten_id tender_lotscount lot_row_nr bid_iswinning tender_isframe bid_iscons tender_title bidder_name bid_price *cons* if x>1
+
+*RULE: use tender_isframework: if true 1 lot , f or missing count lots by grouping tender_id
+*count if missing(tender_lotscount)
+gen lot_number = lot_row_nr
+bys tender_id: replace lot_number=_n if missing(lot_number)
+
+sort  tender_id  lot_number
+// br x tender_id tender_lotscount lot_row_nr lot_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price if x>1
+*OK
+************************************
+*Bid number: Rule;
+
+bys tender_id lot_number: gen bid_number=_n
+// br x tender_id tender_lotscount lot_row_nr lot_number bid_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1 & tender_lotscount==1
+
+// br x tender_id tender_lotscount lot_row_nr lot_number bid_number bid_iswinning tender_isframe bid_iscons tender_title lot_title bidder_name bid_price  if x>1 & tender_lotscount!=1 & tender_isframework=="t"
+*OK
+
+keep tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate  tender_biddeadline tender_proceduretype   tender_publications_notice_type tender_publications_firstcallfor source tender_publications_award_type  tender_publications_firstdcontra  tender_awarddecisiondate buyer_masterid buyer_id anb_city buyer_geocodes buyer_name buyer_buyertype buyer_country tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_name bid_priceUsd bid_price bid_pricecurrency lot_productCode lot_localProductCode_type lot_localProductCode title ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav_val ind_taxhav2_type decp ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type submp ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type ind_comp_bidder_mkt_share_val ind_comp_bidder_mkt_share_type ind_comp_bids_count_val ind_comp_bids_count_type ind_comp_bidder_mkt_entry_val ind_comp_bidder_mkt_entry_type ind_comp_bidder_non_local_val ind_comp_bidder_non_local_type is_capital 
+
+order tender_id lot_number bid_number bid_iswinning tender_country tender_awarddecisiondate  tender_biddeadline tender_proceduretype   tender_publications_notice_type tender_publications_firstcallfor source tender_publications_award_type  tender_publications_firstdcontra  tender_awarddecisiondate buyer_masterid buyer_id anb_city buyer_geocodes buyer_name buyer_buyertype buyer_country tender_addressofimplementation_c tender_addressofimplementation_n bidder_masterid bidder_id bidder_name bid_priceUsd bid_price bid_pricecurrency lot_productCode lot_localProductCode_type lot_localProductCode title ind_nocft_val ind_nocft_type ind_singleb_val ind_singleb_type ind_taxhav_val ind_taxhav2_type decp ind_corr_decp_val ind_corr_decp_type ind_corr_proc_val ind_corr_proc_type submp ind_corr_submp_val ind_corr_submp_type ind_corr_ben_val ind_corr_ben_type  ind_csh_val ind_csh_type ind_tr_buyer_name_val ind_tr_buyer_name_type ind_tr_title_val ind_tr_tender_title_type ind_tr_bidder_name_val ind_tr_bidder_name_type ind_tr_tender_supplytype_val ind_tr_tender_supplytype_type ind_tr_bid_price_val ind_tr_bid_price_type ind_tr_impl_val ind_tr_impl_type ind_tr_proc_val ind_tr_proc_type ind_tr_bids_val ind_tr_bids_type ind_tr_aw_date2_val ind_tr_aw_date2_type ind_comp_bidder_mkt_share_val ind_comp_bidder_mkt_share_type ind_comp_bids_count_val ind_comp_bids_count_type ind_comp_bidder_mkt_entry_val ind_comp_bidder_mkt_entry_type ind_comp_bidder_non_local_val ind_comp_bidder_non_local_type is_capital 
+
+assert !missing(tender_id), fast
+assert !missing(lot_number), fast
+assert !missing(bid_number), fast
+assert !missing(buyer_masterid), fast
+assert !missing(bidder_masterid), fast
 ********************************************************************************
 
-export delimited $country_folder/CL_mod.csv, replace
+export delimited "${utility_data}/country/`country'/`country'_mod.csv", replace
+********************************************************************************
+*Clean up
+copy "${country_folder}/`country'_wb_2011.dta" "${utility_data}/country/`country'/`country'_wb_2011.dta", replace
+local files : dir  "${country_folder}" files "*.dta"
+foreach file in `files' {
+cap erase "${country_folder}/`file'"
+}
+cap erase "${country_folder}/buyers_for_R.csv"
 ********************************************************************************
 *END
+********************************************************************************

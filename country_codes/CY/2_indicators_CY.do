@@ -316,6 +316,24 @@ lab var proa_nrc "#Contracts by PAs"
 gen proa_ycsh4=proa_ycsh if filter_ok==1 & proa_ynrc>4 & proa_ycsh!=.
 *sum proa_ycsh4 proa_ycsh
 ********************************************************************************
+
+save "${country_folder}/`country'_wip.dta", replace
+********************************************************************************
+*New indicators market entry 
+
+*Generate bidder market entry {product_code, year, supplier id, country local macro}
+do "${utility_codes}/gen_bidder_market_entry.do" tender_cpvs tender_year bidder_masterid "`country'"
+
+*Generate market share {bid_price ppp version}
+do "${utility_codes}/gen_bidder_market_share.do" bid_price_ppp 
+
+*Generate is_capital region {`country', buyer_city , one or more nuts variables:buyer_nuts tender_addressofimplementation_n }
+do "${utility_codes}/gen_is_capital.do" "`country'" buyer_city buyer_nuts tender_addressofimplementation_n
+
+*Generate bidder is non local {`country', buyer_city bidder_city, buyer_nuts bidder_nuts}
+do "${utility_codes}/gen_bidder_non_local.do" "`country'" buyer_city bidder_city buyer_nuts bidder_nuts
+
+********************************************************************************
 *Benford's
 
 *Benford's law export

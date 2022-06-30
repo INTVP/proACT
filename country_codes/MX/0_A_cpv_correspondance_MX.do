@@ -1,19 +1,13 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the e-procurment product classification and translates to cpv sectors */
 ********************************************************************************
 
 *Data
-use $utility_data/country/MX/starting_data/wb_mx_sesna_191125.dta, clear
+use "${utility_data}/country/`country'/starting_data/wb_mx_sesna_191125.dta", clear
 ********************************************************************************
 
-desc aw_item_class_id
+// desc aw_item_class_id
 
 
 gen product_str =  aw_item_class_id  //insert the string version of the unspsc code here
@@ -195,19 +189,19 @@ replace cpv_div = "92" if regex(product_str,"^365")
 replace cpv_div = "92" if regex(product_str,"^359")
 replace cpv_div = "98" if regex(product_str,"^358")
 ********************************************************************************
-
 *Checks
-*To check if all availble unspsc are matched to cpv
-count if missing(product_str)
-count if missing(cpv_div)
-br  product_str cpv_div if   !missing(product_str) & missing(cpv_div) & product_str!="."
+
+*To check if all availble codes are matched to cpv
+// count if missing(product_str)
+// count if missing(cpv_div)
+// br  product_str cpv_div if   !missing(product_str) & missing(cpv_div) & product_str!="."
 *All good
 
-br  product_str cpv_div cpv_div_descr if !missing(product_str)
-tab cpv_div, m
+// br  product_str cpv_div cpv_div_descr if !missing(product_str)
+// tab cpv_div, m
 drop product_str 
 ********************************************************************************
 
-save $country_folder/MX_wip, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

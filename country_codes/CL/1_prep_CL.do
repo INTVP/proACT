@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis
@@ -12,9 +6,9 @@ macro list
 4) Structures/prepares other control variables used for risk regressions
 */
 ********************************************************************************
-
 *Data 
-use $country_folder/CL_wip.dta, clear
+
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
 *Note - The compiled dataset was used for an earlier project - most of the data preperation work such as renaming variables where done in an older script. I will copy here all the relevent parts of the script and leave them commented
 *The parts that are not commented are relevent for the ProAct project
@@ -57,27 +51,24 @@ replace ca_contract_value10=99 if ca_contract_value==.
 xtile ca_contract_value5=ca_contract_value if filter_ok==1, nquantiles(5)
 replace ca_contract_value5=99 if ca_contract_value==.
 */
-
-save $country_folder/CL_wip.dta, replace
 ********************************************************************************
-use $utility_data/wb_ppp_data.dta, clear
+use "${utility_data}/wb_ppp_data.dta", clear
 keep if countrycode == "CHL"
 drop if ppp==.
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
 keep year ppp
-save $country_folder/ppp_data.dta, replace
+save "${country_folder}/ppp_data.dta", replace
 ********************************************************************************
 
-use $country_folder/CL_wip.dta, clear
-br tender_finalprice ca_contract_value bid_price *price* *value*
-tab currency, m
-tab tender_year, m
-gen year = tender_year
-merge m:1 year using $country_folder/ppp_data.dta
+use "${country_folder}/`country'_wip.dta", clear
+// br tender_finalprice ca_contract_value bid_price *price* *value*
+// tab currency, m
+// tab tender_year, m
+merge m:1 year using "${country_folder}/ppp_data.dta"
 drop if _m==2
-tabstat ppp, by(tender_year)
+// tabstat ppp, by(tender_year)
 replace ppp=412.3604 if missing(ppp) & year==2020 | year==2019 //used 2018
-br year ppp if _m==3
+// br year ppp if _m==3
 drop _m
 
 rename ca_currency currency
@@ -86,10 +77,10 @@ gen tender_finalprice_ppp = ca_tender_value/ppp if ca_currency=="CLP" | missing(
 gen bid_price_ppp =  ca_contract_value/ppp if ca_currency=="CLP" | missing(ca_currency)
 gen ca_contract_value_ppp =  ca_contract_value/ppp if ca_currency=="CLP" | missing(ca_currency)
 
-br bid_price bid_price_ppp ca_contract_value ca_contract_value_ppp tender_finalprice tender_finalprice_ppp  tender_year ppp currency  
+// br bid_price bid_price_ppp ca_contract_value ca_contract_value_ppp tender_finalprice tender_finalprice_ppp  tender_year ppp currency  
 ********************************************************************************
-
 *Buyer type
+
 /*
 decode anb_name, gen(anb_name_str)
 gen anb_name_str2=lower(anb_name_str)
@@ -135,13 +126,11 @@ encode anb_name_str2, gen(anb_name)
 drop anb_name_str2
 
 */
-
-tab anb_type
+// tab anb_type
 ************************************
-
 *Buyer Location
-/*
 
+/*
 decode anb_city, gen(anb_city_str)
 gen anb_city_str2=lower(anb_city_str)
 
@@ -159,10 +148,18 @@ drop anb_city anb_city_str
 encode anb_city_str2, gen(anb_city)
 drop anb_city_str2
 */
-tab anb_city
-************************************
+// tab anb_city
 
+*Adding regions data 
+gen anb_citystr =proper(anb_city)
+cap drop _m
+
+merge m:m anb_citystr using "${utility_data}/country/`country'/CL_city.dta", keep(1 3) 
+drop _m
+*https://en.wikipedia.org/wiki/Provinces_of_Chile
+************************************
 *Bidder Location
+
 /*
 
 decode w_city, gen(w_city_str)
@@ -246,9 +243,9 @@ drop marketid
 rename marketid_n marketid
 */
 
-tab marketid
+// tab marketid
 ********************************************************************************
 
-save $country_folder/CL_wip.dta , replace
+save "${country_folder}/`country'_wip.dta" , replace
 ********************************************************************************
 *END

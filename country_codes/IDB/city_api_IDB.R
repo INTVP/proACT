@@ -1,10 +1,46 @@
-install.packages("dplyr")
+args = commandArgs(trailingOnly=TRUE)
+setwd(args[1])
 
-library("dplyr", lib.loc="~/R/win-library/3.6")
+print("Running code")
 
-#Set working directory
-#setwd()
-df_city <- read.csv("IDB_forcityapi.csv", encoding = "UTF-8")
+# Code to get structured cities for the IDB data
+
+# Packages 
+# Load and Install libraries ----
+
+# FIRST: check if pacman is installed. 
+# This package installs and loads other packages
+if (!require(pacman)) {
+  install.packages("pacman", dependencies = TRUE)
+}
+
+# SECOND: list all other packages that will be used
+# Add libraries as needed here.
+# Please also add the reason why this library is added
+packages <- c(
+  "tidyverse"
+)  
+
+# THIRD: installing and loading the packages
+# The following lines checks if the libraries are installed.
+# If installed, they will be loaded.
+# If not, they will be installed then loaded.
+p_load(
+  packages, 
+  character.only = TRUE, 
+  depencies = TRUE
+)
+
+options(warn=0) # suppress warnings OFF
+
+#library("dplyr", lib.loc="~/R/win-library/3.6")
+
+# Load the data for the analysis
+df_city <-
+  read_csv(
+    'IDB_forcityapi.csv',
+    col_names = TRUE 
+    )
 
 
 # city cleaning =====================================================================
@@ -13,14 +49,13 @@ df_city <- read.csv("IDB_forcityapi.csv", encoding = "UTF-8")
 # generate a url for HERE api geo mapping
 get_url <- function(x, language = tolower('en')) {
   # generate a url for HERE api geo mapping
-  #apiKey <- ''  #enter apiKey
+  apiKey <- ''  #enter apiKey
+  
   base_url <- "https://geocoder.ls.hereapi.com/search/6.2/geocode.json"
   print(x)
   output <- httr::GET(base_url,
                       query = list(language = language,
-                                   apiKey = apiKey,
-                                   #app_id = App_id,
-                                   #app_code = App_code,
+                                   apiKey = api_key,
                                    searchtext = x))
   return(output)
 }

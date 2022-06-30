@@ -10,7 +10,7 @@ explanations on the main functions of the scripts used.
 ## Replication
 * To replicate a country dataset:
 > 1. After cloning this repository, request the input data from GTI by writing to info@govtransparency.eu
-GTI will send country.zip to replace [ProACT-2020/utility_data/country/](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_data/country)
+GTI will send the country.zip archive to replace [ProACT-2020/utility_data/country/](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_data/country)
 > 2. Launch Stata using [main.do](https://github.com/GovTransparencyInstitue/ProACT-2020/blob/main/main.do) from the root directory.
 > 3. [main.do](https://github.com/GovTransparencyInstitue/ProACT-2020/blob/main/main.do) takes two inputs: country list to execute the code and  R_path_local. R_path_local is the path of Rscript.exe on your  machine.
 > 4. Execute main.do
@@ -23,18 +23,18 @@ GTI publishes its datasets [here](http://www.govtransparency.eu/gtis-global-gove
 For ease of use, it is also possible to get a direct download link to all datasets by writing to info@govtransparency.eu.
 
 2. [Utility datasets](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_data) :
- This folder contains all utility datasets used for all countries. For example, it contains the secrecy score index used to identify tax havens,
+ This directory contains all utility datasets used for all countries. For example, it contains the secrecy score index used to identify tax havens,
 our own correspondence tables to transform different product classifications to CPV codes, and the World Bank's PPP conversion factor (code: PA.NUS.PPP).
 
 3. Output data :
 The output from running the scripts in [./country_codes/](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/country_codes)
-are the XX_mod.csv data files. These are interim files. The scripts store them in each country folder in the *./[country_codes](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/country_codes)* directory.
+are the XX_mod.csv data files. These are interim files. The scripts store in the country sub-directory in utility data [ProACT-2020/utility_data/country/](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_data/country)
 
 
 ## Script Navigation
 
 1. [Utility Codes](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/utility_codes)
-The scripts in this folder are shared by all the country specific scripts.
+The scripts in this directory are shared by all the country specific scripts.
 
 * [Benford.R](/utility_codes/benford.R) : used to calculate corruption risk indicators based on Benford's law. Documentation of the benford.analysis R package can be found [here](https://www.rdocumentation.org/packages/benford.analysis/versions/0.1.5)
 
@@ -46,10 +46,24 @@ The scripts in this folder are shared by all the country specific scripts.
 
 * [quick_name_cleaning](/utility_codes/quick_name_cleaning.do) : removes punctuations and corrupted unicode characters from string variables.
 
+* [quick_location_cleaning](/utility_codes/quick_location_cleaning.do) : cleans the city variables from the source data in order to identify similar locations.
+
 * [transliteration_cleaning](/utility_codes/transliteration_cleaning.do) : transliterates non-latin characters into latin.
 
+* [fix_bad_national_proc_type](/utility_codes/fix_bad_national_proc_type.do) : removes bad encoding of procedure types from the source datasets.
+
+* [gen_bidder_market_entry](/utility_codes/gen_bidder_market_entry.do) : generates the market entry competition indicator.
+
+* [gen_bidder_market_share](/utility_codes/gen_bidder_market_share.do) : generates the supplier market share competition indicator.
+
+* [gen_bidder_non_local](/utility_codes/gen_bidder_non_local.do) : identifies if a supplier is non-local based on the organization's cities.
+
+* [gen_is_capital](/utility_codes/gen_is_capital.do) : identifies if buyer is in the capital region.
+
+* [ssc_install](/utility_codes/ssc_install.do) : installs required packages from SSC in case they are not installed.
+
 2. [Country Specific codes](https://github.com/GovTransparencyInstitue/ProACT-2020/tree/main/country_codes)
-The scripts in this folder are the main scripts used to generate the output data. There are four types of codes: a) Pre-processing scripts b) Preparation scripts c) Indicator calculation scripts d) MOD scripts
+The scripts in this directory are the main scripts used to generate the output data. There are four types of codes: a) Pre-processing scripts b) Preparation scripts c) Indicator calculation scripts d) MOD scripts
 
 a) **Pre-processing scripts**
 
@@ -74,15 +88,15 @@ The downloaded data is restructured and stored [here](/utility_data/wb_ppp_data.
 c) **Indicator calculation scripts**
 
 Indicator generating scripts are named *`2_indicators_XX`*. These allow to re-run all validity tests behind each individual corruption risk indicator.
-This script create all the risk indicators and the composite risk score for all countries. All the assigned risk thresholds are in the [CRI_definitions_ProAct2020](/utility_data/CRI_definitions_ProAct2020.docx) sheet.
+This script creates all the risk indicators and the composite risk score for all countries. All the assigned risk thresholds are in the [CRI_definitions_ProAct2020](/utility_data/CRI_definitions_ProAct2020.docx) sheet.
 
 The following risk indicators were calculated whenever underlying data was available: Single bidding, Procedure type, No Call for tender, Submission period, Decision period,
-Tax haven ( [The Foreign Secrecy Index](https://fsi.taxjustice.net/en/) from the Tax Justice Network was used to compile [FSI_wide_200812_fin.dta](/utility_data/FSI_wide_200812_fin.dta)),
+Tax haven ( [The Financial Secrecy Index](https://fsi.taxjustice.net/en/) from the Tax Justice Network was used to compile [FSI_wide_200812_fin.dta](/utility_data/FSI_wide_200812_fin.dta)),
 Public organization and supplier dependency risks, Benford’s law based risk indicator, Delay & Cost Overrun.
 
 The CRI is a standardized risk indicator, that is the average of the elementary indicators, between 0-1 (continuous). Missing values of the elementary indicators are coded as 99 to limit the estimation sample size reduction due to missing values. Missing values by themselves can be a risk category.
 
-You can read more detailes about the CRI methodology [here](https://link.springer.com/article/10.1007/s10610-016-9308-z) 
+You can read more details about the CRI methodology [here](https://link.springer.com/article/10.1007/s10610-016-9308-z)
 
 d) **MOD scripts**
 
@@ -96,13 +110,13 @@ Transparency indicators are coded between 0 (missing) and 100 (non-missing). The
 
 Finally, variable names and data formats are standardized to avoid any inconsistencies that might have been introduced in previous cleaning steps.
 
-  **US** - For the US data, the [full_process_US.R](./country_codes/US/full_process_US.R) script implements the mentioned three steps in one script.
+  **US** - For the US data, the [full_process_US.R](./country_codes/US/full_process_US.R) and [x_extra_US.do](./country_codes/US/x_extra_US.do) scripts implements the mentioned three steps in one script. The extra script is an additional script that calcualtes the competetion indicators.
 
-Once the data files (*_mod.csv*) are ready, they go through a conversion and standardization step. Documentation for this process can be found in [csv_to_json](csv_to_json) folder.
+Once the data files (*_mod.csv*) are ready, they go through a conversion and standardization step. Documentation for this process can be found in [csv_to_json](csv_to_json) directory.
 
 ## Debarment
 
-The debarment data full documentation is in the [debarment](debarment) folder.
+The debarment data full documentation is in the [debarment](debarment) directory.
 
 <!-- ![Imgur](https://i.imgur.com/Armr1OH.png) -->
 

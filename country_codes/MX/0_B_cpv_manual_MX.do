@@ -1,34 +1,28 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the tender/contract titles to find the
  relevant cpv code using keywords*/
 ********************************************************************************
-
 *Data
-use $country_folder/MX_wip.dta, clear
+
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
 
 *Product variable - original dataset aw_item_class_id
 *Product variable - product harmonized dataset: cpv_div cpv_div_descr  
 
-br *title*
+// br *title*
 *Only one title varibale ten_title // ten_title_str
 rename ten_title_str title
 format title %35s
-br title 
-count if missing(title)
+// br title 
+// count if missing(title)
 ********************************************************************************
 *Cleaning title
 
-charlist title 
+// charlist title 
 
-br title
+// br title
 
 local stop " "΄" "{" "}" "+" "’" "~" "!" "*" "<" ">" "[" "]" "=" "&" "(" ")" "?" "#" "^" "%"  "," "-" ":" ";" "@" "„" "´" "ʼ" "|" "`" "
 foreach v of local stop {
@@ -67,14 +61,14 @@ replace title = subinstr(title, "  ", " ",.)
 }
 replace title = stritrim(title)
 replace title = strtrim(title)
-unique  title
+// unique  title
 
-count if missing(ten_title)
-count if missing(title)
+// count if missing(ten_title)
+// count if missing(title)
 *Mismatch is because title had numbers instead of text
 ********************************************************************************
-
 *Manual Matching from keyword list
+
 gen cpv = ""
 replace title = " " + title + " "
 
@@ -284,18 +278,19 @@ replace cpv = "91000000" if regex(title," combustible ") & missing(cpv)
 replace title = stritrim(title)
 replace title = strtrim(title)
 
-br title cpv cpv_div if !missing(cpv) & !missing(cpv_div)
+// br title cpv cpv_div if !missing(cpv) & !missing(cpv_div)
 gen cpv_div2 = cpv_div + "000000"
 replace cpv = cpv_div2 if !missing(cpv_div)
-drop cpv_div2 cpv_div cpv_div_descr
+cap drop cpv_div2 cpv_div 
+cap drop cpv_div_descr
 ********************************************************************************
-
 *More Manual matching
-br title if missing(cpv)
+
+// br title if missing(cpv)
 bys title: gen X=_N
 bys title: gen x=_n
 gsort -X
-br title X  cpv if missing(cpv) & !missing(title) & x==1
+// br title X  cpv if missing(cpv) & !missing(title) & x==1
 *******************************
 
 replace title = " " + title + " "
@@ -346,6 +341,6 @@ replace title=strtrim(title)
 replace title=strltrim(title)
 ********************************************************************************
 
-save $country_folder/MX_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

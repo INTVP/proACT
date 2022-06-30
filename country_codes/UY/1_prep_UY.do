@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis
@@ -14,50 +8,50 @@ macro list
 ********************************************************************************
 
 *Data 
-use $country_folder/UY_wip.dta, clear
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
-
 *Main Filter
 
 decode w_name, gen(w_name_str)
 replace w_name_str="" if w_name_str=="."
 gen filter_wb=!missing(w_name)
 replace filter_wb=0 if year<2015 | ten_status==2
-tab filter_wb, m
+// tab filter_wb, m
 
 *246k obs with missing year - get a year variable for them
 *Fixing year
-br aw_dec_date cft_open_date cft_date cft_deadline * if year==.
+// br aw_dec_date cft_open_date cft_date cft_deadline * if year==.
 *useless 
 replace filter_wb=0 if year==.
 
 ********************************************************************************
 *Check Price information
-br ca_contract_value aw_item_curr aw_item_unit_val_raw  aw_item_quantity 
+// br ca_contract_value aw_item_curr aw_item_unit_val_raw  aw_item_quantity 
 *ca_contract_value= aw_item_quantity * aw_item_unit_val_raw
 *Estimated: Missing
 *tender_estimatedprice, lot_estimatedprice
 *Actual: ca_contract_value
 *Fix currency
-tab aw_item_curr if filter_wb, m
-save $country_folder/UY_wip.dta, replace
+// tab aw_item_curr if filter_wb, m
+
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
 local temp ""Brazil" "Canada" "Switzerland" "United Kingdom" "Uruguay" "South Africa""
 local n_temp : word count `temp'
 forval s=1/`n_temp'{
-use $utility_data/wb_ppp_data.dta, clear
+use "${utility_data}/wb_ppp_data.dta", clear
 keep if inlist(countryname,"`: word `s' of `temp''")
 drop if ppp==.
 keep year ppp
 local x = lower(substr("`: word `s' of `temp''",1,2))
-save $country_folder/ppp_data_`x'.dta
+save "${country_folder}/ppp_data_`x'.dta", replace
 }
 *********************************
-use $country_folder/UY_wip.dta,clear
+use "${country_folder}/`country'_wip.dta",clear
 
-tab year if filter_wb, m
+// tab year if filter_wb, m
 decode aw_item_curr, gen (curr)
 replace curr="UYU" if missing(curr)
 replace curr="UYU" if curr=="UYI"
@@ -67,34 +61,33 @@ local temp2 ""BRL" "CAD" "CHF" "GBP" "UYU" "ZAR""
 local n_temp : word count `temp'
 gen ca_contract_value_ppp=.
 forval s=1/`n_temp'{
-merge m:1 year using ppp_data_`: word `s' of `temp''.dta
+merge m:1 year using "${country_folder}/ppp_data_`: word `s' of `temp''.dta" 
 drop if _m==2
 drop _m 
 replace ca_contract_value_ppp=ca_contract_value/ppp if filter_wb & curr=="`: word `s' of `temp2''"
 drop ppp
 }
-count if missing(ca_contract_value) & filter_ok
-count if missing(ca_contract_value_ppp) & filter_ok
+// count if missing(ca_contract_value) & filter_ok
+// count if missing(ca_contract_value_ppp) & filter_ok
 
-br ca_contract_value_ppp ca_contract_value curr aw_item_curr if filter_wb
+// br ca_contract_value_ppp ca_contract_value curr aw_item_curr if filter_wb
 *Main curr variable curr
 label var ca_contract_value "Contract price (LCU)"
 label var ca_contract_value_ppp "Contract price (USD - ppp adjusted)"
 label var curr "Currency adjusted"
 ********************************************************************************
 *Controls 
-************************************
-
+********************************************************************************
 *Contract Value
-hist ca_contract_value_ppp if filter_wb
+
+// hist ca_contract_value_ppp if filter_wb
 cap drop lca_contract_value
 gen lca_contract_value = log(ca_contract_value_ppp)
-hist lca_contract_value if filter_ok
+// hist lca_contract_value if filter_ok
 xtile ca_contract_value10 = ca_contract_value_ppp if filter_wb, nq(10)
 replace ca_contract_value10 = 99 if missing(ca_contract_value_ppp)
-tab ca_contract_value10 if filter_wb, m
+// tab ca_contract_value10 if filter_wb, m
 ************************************
-
 *Buyer type
 
 /*
@@ -115,7 +108,7 @@ drop anb_type
 rename anb_type_n anb_type
 */
 
-tab anb_type, m  //use this for the regression
+// tab anb_type, m  //use this for the regression
 
 decode anb_type, gen (buyer_type_temp)
 gen buyer_type="NATIONAL_AUTHORITY" if buyer_type_temp=="national authority"
@@ -125,32 +118,32 @@ replace buyer_type="REGIONAL_AGENCY" if buyer_type_temp=="local body"
 replace buyer_type="PUBLIC_BODY" if buyer_type_temp=="armed forces"
 replace buyer_type="OTHER" if buyer_type_temp=="national banks and funds" | buyer_type_temp=="other"
 drop buyer_type_temp
-tab buyer_type, m  //use this for the output
+// tab buyer_type, m  //use this for the output
 ************************************
-
 *Location  -  no location data
 ************************************
-
 *Tender year
-tab year, m
-************************************
 
+// tab year, m
+************************************
 *Contract type
-tab ca_type if filter_wb, m
+
+// tab ca_type if filter_wb, m
 decode ca_type,gen (supply_type)
 replace supply_type="NA" if missing(supply_type)
 encode supply_type, gen(ca_type_r)
 label var ca_type_r "Supply type to be used in regression"
 drop supply_type
-tab ca_type_r if filter_wb, m // use this for the regression
+// tab ca_type_r if filter_wb, m // use this for the regression
 ************************************
-
 *Supply Type
+
 gen supply_type="SERVICES" if ca_type==3
 replace supply_type="SUPPLIES" if ca_type==2
 replace supply_type="WORKS" if ca_type==4
-tab supply_type ca_type, m
-tab supply_type , m //use this for the output
+// tab supply_type ca_type, m
+// tab supply_type , m //use this for the output
+gen tender_supplytype = supply_type
 ************************************
 
 *Market ids [+ the missing cpv fix]
@@ -160,20 +153,16 @@ replace tender_cpvs = "99200000" if missing(tender_cpvs) & supply_type=="SERVICE
 replace tender_cpvs = "99300000" if missing(tender_cpvs) & supply_type=="WORKS"
 replace tender_cpvs = "99000000" if missing(tender_cpvs) 
 
-replace tender_cpvs = "99100000" if tender_cpvs =="99200000" & supply_type=="SUPPLIES"
-replace tender_cpvs = "99200000" if tender_cpvs =="99200000" & supply_type=="SERVICES"
-replace tender_cpvs = "99300000" if tender_cpvs =="99200000" & supply_type=="WORKS"
-
 gen market_id=substr(tender_cpvs,1,2)
 *Clean Market id
-tab market_id, m
+// tab market_id, m
 replace market_id="NA" if missing(market_id)
 encode market_id,gen(market_id2)
 drop market_id
 rename market_id2 market_id
-tab market_id, m
+// tab market_id, m
 ********************************************************************************
 
-save $country_folder/UY_wip.dta , replace
+save "${country_folder}/`country'_wip.dta" , replace
 ********************************************************************************
 *END

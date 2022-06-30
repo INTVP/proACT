@@ -1,10 +1,4 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script prepares the data for Risk indicator calculation
 1) Creates main filter to be used throught analysis
@@ -14,7 +8,7 @@ macro list
 ********************************************************************************
 
 *Data 
-use $country_folder/CO_wip.dta, clear
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
 *Note - The compiled dataset was used for an earlier project - most of the data preperation work such as renaming variables where done in an older script. I will copy here all the relevent parts of the script and leave them commented
 *The parts that are not commented are relevent for the ProAct project
@@ -55,42 +49,40 @@ xtile ca_contract_value5=ca_contract_value if filter_ok==1, nquantiles(5)
 replace ca_contract_value5=99 if ca_contract_value==.
 */
 
-save $country_folder/CO_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *PPP conversion
 
-use $utility_data/wb_ppp_data.dta, clear
+use "${utility_data}/wb_ppp_data.dta", clear
 keep if countrycode == "COL"
 drop if ppp==.
 *Inidcator name: PPP conversion factor, GDP (LCU per international $)
 keep year ppp
-save $country_folder/ppp_data.dta, replace
+save "${country_folder}/ppp_data.dta", replace
 ********************************************************************************
+use "${country_folder}/`country'_wip.dta", clear
 
-use $country_folder/CO_wip.dta, clear
-
-
-sum ca_year cft_year year
+// sum ca_year cft_year year
  
 rename year year_old
 rename ca_year year
 
 *br tender_finalprice ca_contract_value bid_price *price* *value*
-tab ca_curr, m
+// tab ca_curr, m
 replace ca_curr=. if ca_curr==2 | ca_curr==3
-merge m:1 year using $country_folder/ppp_data.dta
+merge m:1 year using "${country_folder}/ppp_data.dta"
 drop if _m==2
-tabstat ppp, by(year)
-*replace ppp=0.684051 if missing(ppp) & year==2020 //used 2019
-br year ppp if _m==3
-drop _m year
+// tabstat ppp, by(year)
+replace ppp=1349.012 if missing(ppp) & year==2020 //used 2019
+// br year ppp if _m==3
+drop _m 
 
-gen tender_finalprice_ppp = ten_value/ppp if ca_curr==4 | missing(ca_curr)
+gen tender_finalprice_ppp = ten_value/ppp if ca_curr==1 | missing(ca_curr)
 gen bid_price=ca_contract_value
-gen bid_price_ppp =  bid_price/ppp if ca_curr==4 | missing(ca_curr)
-gen ca_contract_value_ppp =  ca_contract_value*ppp if ca_curr==4 | missing(ca_curr)
+gen bid_price_ppp =  bid_price/ppp if ca_curr==1 | missing(ca_curr)
+gen ca_contract_value_ppp =  ca_contract_value/ppp if ca_curr==1 | missing(ca_curr)
 
-br bid_price bid_price_ppp ca_contract_value ca_contract_value_ppp tender_finalprice tender_finalprice_ppp  tender_year ppp currency  
+// br bid_price bid_price_ppp ca_contract_value ca_contract_value_ppp tender_finalprice tender_finalprice_ppp  tender_year ppp currency  
 ********************************************************************************
 
 *Dates
@@ -108,9 +100,9 @@ label var cft_year_s2 "call for tender year of secop 2"
 tab ca_year, missing
 */
 
-foreach var of varlist cft_deadline aw_start_date ca_sign_date ca_start_date ca_end_date ci_start_date ci_end_date cft_lastdate interest_date draft_date select_date cft_open_date aw_date cft_date {
+foreach var of varlist cft_deadline aw_start_date ca_sign_date ca_start_date ca_end_date ci_start_date ci_end_date cft_lastdate interest_date draft_date select_date cft_open_date aw_date  {
 decode `var', gen(`var'_str)
-replace `var'_str="" if `var'_str=="0" | `var'_str=="1" | `var'_str=="99"
+replace `var'_str="" if `var'_str=="0" | `var'_str=="1" | `var'_str=="99" | `var'_str=="."
 drop `var'
 }
 
@@ -119,6 +111,7 @@ gen `var'_2= date(`var', "YMD")
 format `var'_2 %d
 }
 
+// cft_date
 
 // gen cft_date=date(cft_date_str, "DMY")
 // format cft_date %td
@@ -134,33 +127,26 @@ rename select_date_str_2 select_date
 rename cft_open_date_str_2 cft_open_date
 rename aw_date_str_2 aw_date
 ********************************************************************************
-
-
 *buyer type
 
-tab anb_type
+// tab anb_type
 // replace anb_type=99 if anb_type==.
-label define anb_type 99"missing", add
+// label define anb_type 99"missing", add
 ********************************************************************************
-
 * Market
-*Generated from ca_descr_l2 and item_class_code
-tab marketid
-// replace marketid=999 if marketid==.
-********************************************************************************
 
+*Generated from ca_descr_l2 and item_class_code
+// tab marketid
+// replace marketid=999 if marketid==.
+gen tender_cpvs = cpv_div + "000000" if !missing(cpv_div)
+********************************************************************************
 *product type
 
-tab ca_type
-label list ca_type
+// tab ca_type
+// label list ca_type
 // replace ca_type=2 if ca_type==.
 ********************************************************************************
 
-save $country_folder/CO_wip.dta , replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END
-
-
-
-
-

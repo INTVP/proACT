@@ -1,33 +1,27 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that translates the UNSPC codes to CPV*/
 ********************************************************************************
 
 *Data
-use $utility_data/country/CO/starting_data/secop_all191121.dta, clear
+use "${utility_data}/country/`country'/starting_data/secop_all191121.dta", clear
 ********************************************************************************
 
 *Pre work to obtain a good product code variable
+cap drop product_code
 gen product_code = item_class_code
 tostring  product_code, replace
 decode item_class_code_addid, gen(item_class_code_addid_str)
 replace product_code = item_class_code_addid_str if product_code=="." & source==2 //secop2
 decode ca_id, gen(ca_id_str)
 replace product_code = ca_id_str if product_code=="." & source==1 //secop1
-drop  item_class_code_addid_str
 replace product_code="" if product_code=="."
 *These vars should be dropped as well
-drop item_class_code item_class_code_addid ca_id_str
+drop item_class_code_addid_str ca_id_str
 ********************************************************************************
 
-gen product_str =  product_code  //insert the string version of the unspsc code here
-desc  product_str
+rename product_code product_str  //insert the string version of the unspsc code here
+// desc  product_str
 replace product_str = strtrim(product_str)
 replace product_str = stritrim(product_str)
 replace product_str = strltrim(product_str)
@@ -172,23 +166,23 @@ replace cpv_div_descr = "Recreational, cultural and sporting services" if cpv_di
 replace cpv_div_descr = "Other community, social and personal services" if cpv_div =="98"
 replace cpv_div_descr = "Uncategorized" if cpv_div =="99"
 ********************************************************************************
+*Fixes
 
-drop product_str 
-rename product_code tender_unspsc_original
+*4 codes - the codes are not detailed enough to match 
+*83, 90, 78, 45
+replace cpv_div = "65" if regex(product_str,"^83") & missing(cpv_div)
+replace cpv_div = "38" if regex(product_str,"^45") & missing(cpv_div)
+replace cpv_div = "55" if regex(product_str,"^90") & missing(cpv_div)
+replace cpv_div = "34" if regex(product_str,"^78") & missing(cpv_div)
+********************************************************************************
+
+rename product_str tender_unspsc_original
 label var tender_unspsc_original "Source product code - UNSPSC"
 label var cpv_div "CPV division tranlsation of original UNSPSC code"
 label var cpv_div_descr "CPV division description"
 ********************************************************************************
 
-*Fixes
-*4 codes - the codes are not detailed enough to match 
-*83, 90, 78, 45
-replace cpv_div = "65" if regex(tender_unspsc_original,"^83") & missing(cpv_div)
-replace cpv_div = "38" if regex(tender_unspsc_original,"^45") & missing(cpv_div)
-replace cpv_div = "55" if regex(tender_unspsc_original,"^90") & missing(cpv_div)
-replace cpv_div = "34" if regex(tender_unspsc_original,"^78") & missing(cpv_div)
-********************************************************************************
 
-save $country_folder/CO_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

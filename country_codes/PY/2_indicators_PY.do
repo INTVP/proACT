@@ -2,8 +2,8 @@ local country "`0'"
 ********************************************************************************
 /*This script runs the risk indicator models to identify risk thresholds.*/
 ********************************************************************************
-
 *Data
+
 use "${country_folder}//`country'_wip.dta", clear
 ********************************************************************************
 *Winner dependence on buyer
@@ -386,7 +386,24 @@ gen w_ycsh4=w_ycsh if filter_ok==1 & w_ynrc>4 & w_ycsh!=.
 
 gen proa_ycsh4=proa_ycsh if filter_ok==1 & proa_ynrc>4 & proa_ycsh!=.
 // sum proa_ycsh4 proa_ycsh
-*******************************************************************************
+********************************************************************************
+
+save "${country_folder}/`country'_wip.dta", replace
+********************************************************************************
+*New indicators 
+
+*Generate bidder market entry {product_code, year, supplier id, country local macro}
+do "${utility_codes}/gen_bidder_market_entry.do" tender_cpvs year w_masterid "`country'"
+
+*Generate market share {bid_price ppp version}
+do "${utility_codes}/gen_bidder_market_share.do" ca_contract_value_ppp 
+
+*Generate is_capital region {`country', buyer_city , one or more nuts variables:buyer_nuts tender_addressofimplementation_n }
+do "${utility_codes}/gen_is_capital.do" "`country'" anb_city anb_dept
+
+*Generate bidder is non local {`country', buyer_city bidder_city, buyer_nuts bidder_nuts}
+do "${utility_codes}/gen_bidder_non_local.do" "`country'" anb_city w_city
+********************************************************************************
 *Benford's
 
 *anb_masterid  if the main id

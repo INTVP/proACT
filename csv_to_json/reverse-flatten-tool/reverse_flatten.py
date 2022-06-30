@@ -460,7 +460,3 @@ logger = logging.getLogger('reverse_flatten')
 
 if __name__ == '__main__':
     main()
-    file = folder_arg + '.portal'
-    print("{0} INFO [MainThread] compress: Zipping {1}...".format(datetime.datetime.now(), file))
-    subprocess.run(f'gzip -f {file}', capture_output=True)
-    print("{0} INFO [MainThread] compress: {1} Zipped!".format(datetime.datetime.now(), file))

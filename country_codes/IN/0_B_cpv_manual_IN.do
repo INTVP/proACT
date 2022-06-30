@@ -1,31 +1,24 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the tender/contract titles to find the
  relevant cpv code using keywords*/
 ********************************************************************************
 
 *Data
-use $country_folder/IN_wip, clear
+use "${country_folder}/`country'_wip", clear
 ********************************************************************************
+// destring cpv_code, gen (cpv_code2)
+// drop cpv_code
+// rename cpv_code2 cpv_code
 
-destring cpv_code, gen (cpv_code2)
-drop cpv_code
-rename cpv_code2 cpv_code
+replace cpv_code="24300000"  if regex(title,"acetone") & missing(cpv_code)
+replace cpv_descr="Basic inorganic and organic chemicals"  if regex(title,"acetone") & cpv_code=="24300000"
 
-replace cpv_code=24300000  if regex(title,"acetone") & missing(cpv_code)
-replace cpv_descr="Basic inorganic and organic chemicals"  if regex(title,"acetone") & cpv_code==24300000
+replace cpv_code="16340000"  if regex(title,"crop thresher") & missing(cpv_code)
+replace cpv_descr="Harvesting and threshing machinery"  if regex(title,"crop thresher") & cpv_code=="16340000"
 
-replace cpv_code=16340000  if regex(title,"crop thresher") & missing(cpv_code)
-replace cpv_descr="Harvesting and threshing machinery"  if regex(title,"crop thresher") & cpv_code==16340000
-
-replace cpv_code=45000000  if regex(title,"civil|civil works|works") & missing(cpv_code)
-replace cpv_descr="Construction work"  if regex(title,"civil|civil works|works") & cpv_code==45000000
+replace cpv_code="45000000"  if regex(title,"civil|civil works|works") & missing(cpv_code)
+replace cpv_descr="Construction work"  if regex(title,"civil|civil works|works") & cpv_code=="45000000"
 
 
 replace cpv_code="797100004"  if regex(title,"security") & regex(title,"services") & missing(cpv_code)
@@ -320,9 +313,9 @@ replace cpv_descr="Radiotherapy devices and supplies"  if regex(title,"oxygen") 
 replace cpv_code="341444318"  if regex(title,"suction") & missing(cpv_code)
 replace cpv_descr="Suction-sweeper vehicles"  if regex(title,"suction") & cpv_code=="341444318"
 
-count if missing(cpv_code)
+// count if missing(cpv_code)
 ********************************************************************************
 
-save $country_folder/IN_wip, replace
+save "${country_folder}/`country'_wip", replace
 ********************************************************************************
 *END

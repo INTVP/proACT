@@ -1,16 +1,10 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script runs the risk indicator models to identify risk thresholds.*/
 ********************************************************************************
-
 *Data
-use $country_folder/CL_wip.dta, clear
+
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
 *Note - The compiled dataset was used for an earlier project - most of the data preperation work such as renaming variables where done in an older script. I will copy here all the relevent parts of the script and leave them commented
 *The parts that are not commented are relevent for the ProAct project
@@ -248,26 +242,25 @@ xtile aw_critcount5=aw_critcount if filter_ok==1, nquantiles(5)
 replace aw_critcount5=99 if aw_critcount==.
 */
 ********************************************************************************
-
 * Indicator validation: singleb regressions ***
 
 *controls only
 
-sum singleb anb_type lca_contract_value year marketid anb_city
-sum singleb anb_type lca_contract_value year marketid anb_city if filter_ok==1
+// sum singleb anb_type lca_contract_value year marketid anb_city
+// sum singleb anb_type lca_contract_value year marketid anb_city if filter_ok==1
 *few missing for anb_type and anb_city (<5%)
 
-logit singleb lca_contract_value i.anb_type i.year i.marketid, base
-logit singleb lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb lca_contract_value i.anb_type i.year i.marketid, base
+// logit singleb lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 ********************************************************************************
 
 * Procedure types
 
-tab ca_procedure if filter_ok==1
+// tab ca_procedure if filter_ok==1
 *99.35% open, no real variance
 *national procedure type is all missing-->fix at the next data update
 
-logit singleb ib3.ca_procedure lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb ib3.ca_procedure lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *ok
 
 /*
@@ -278,29 +271,27 @@ replace corr_proc=99 if corr_proc==.
 tab corr_proc if filter_ok==1, missing
 */
 
-logit singleb i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *great
 ********************************************************************************
-
 *nocft
 
-tab nocft if filter_ok==1
-tab ca_procedure nocft if filter_ok==1
-tab corr_proc nocft if filter_ok==1, missing
-
-logit singleb i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-*counterint.
-logit singleb i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & corr_proc==1, base
+// tab nocft if filter_ok==1
+// tab ca_procedure nocft if filter_ok==1
+// tab corr_proc nocft if filter_ok==1, missing
+//
+// logit singleb i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// *counterint.
+// logit singleb i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & corr_proc==1, base
 *works for risky procedure types
 ********************************************************************************
-
 *advertisement period
 
-sum submp
-tab submp
-hist submp
-hist submp, by(ca_procedure)
+// sum submp
+// tab submp
+// hist submp
+// hist submp, by(ca_procedure)
 *94% <=15 days
 /*
 xtile submp5=submp if filter_ok==1, nquantiles(5)
@@ -310,92 +301,89 @@ replace submp10=99 if submp==.
 xtile submp25=submp if filter_ok==1, nquantiles(25)
 replace submp25=99 if submp==.
 */
-tab submp5
-tab submp25
-tab submp25 nocft
-sum submp if nocft==1
+// tab submp5
+// tab submp25
+// tab submp25 nocft
+// sum submp if nocft==1
 *no overlaps
 
-tabstat submp, by(submp25) stat(min max N)
-tabstat submp, by(submp10) stat(min max N)
-tabstat submp, by(submp5) stat(min max N)
+// tabstat submp, by(submp25) stat(min max N)
+// tabstat submp, by(submp10) stat(min max N)
+// tabstat submp, by(submp5) stat(min max N)
 
-logit singleb submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.submp5 i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.nocft#i.corr_proc i.submp10 lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-*counterint., shortest is the least risky
-logit singleb i.nocft#i.corr_proc i.submp10#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-*better, shorter periods increase risk of single bidding in case of non-competitive procedure types
-logit singleb i.nocft#i.corr_proc ib10.submp10#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-
+// logit singleb submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.submp5 i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.nocft#i.corr_proc i.submp10 lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// *counterint., shortest is the least risky
+// logit singleb i.nocft#i.corr_proc i.submp10#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// *better, shorter periods increase risk of single bidding in case of non-competitive procedure types
+// logit singleb i.nocft#i.corr_proc ib10.submp10#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 
 gen corr_submp=.
 replace corr_submp=0 if submp10>=7 & submp10!=. & corr_proc==1 | submp10!=. & corr_proc==0
 replace corr_submp=1 if submp10>=2 & submp10<=6 & submp10!=. & corr_proc==1
 replace corr_submp=2 if submp10==1 & submp10!=. & corr_proc==1
 replace corr_submp=99 if submp10==99
-tab submp10 corr_submp, missing
-tabstat submp if filter_ok==1, by(corr_submp) stat(min mean max N)
+// tab submp10 corr_submp, missing
+// tabstat submp if filter_ok==1, by(corr_submp) stat(min mean max N)
 
-logit singleb i.nocft#i.corr_proc i.corr_submp lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.nocft#i.corr_proc i.corr_submp lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *great
 ********************************************************************************
-
 *decision making period
 
-sum decp
-hist decp
+// sum decp
+// hist decp
 
 rename decp decp_old
 gen decp=decp_old
 replace decp=. if decp>183 
 
-xtile decp5=decp if filter_ok==1, nquantiles(5)
-replace decp5=99 if decp==.
+// xtile decp5=decp if filter_ok==1, nquantiles(5)
+// replace decp5=99 if decp==.
 xtile decp10=decp if filter_ok==1, nquantiles(10)
 replace decp10=99 if decp==.
-xtile decp25=decp if filter_ok==1, nquantiles(25)
-replace decp25=99 if decp==.
-tab decp5
-tab decp25
-tabstat decp, by(decp25) stat(min max mean N)
+// xtile decp25=decp if filter_ok==1, nquantiles(25)
+// replace decp25=99 if decp==.
+// tab decp5
+// tab decp25
+// tabstat decp, by(decp25) stat(min max mean N)
 
-logit singleb decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.decp5 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.decp10 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb ib10.decp10 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.decp25 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-*as expected
+// logit singleb decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.decp5 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.decp10 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb ib10.decp10 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.decp25 i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// *as expected
 
 gen corr_decp=0
 replace corr_decp=2 if decp10<=3
 replace corr_decp=1 if decp10>=4 & decp10<=6
 replace corr_decp=99 if decp==.
-tab decp10 corr_decp, missing
+// tab decp10 corr_decp, missing
 
-logit singleb i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *as expected (nocft insignificant)
 ********************************************************************************
-
 *aw_critcount
-sum aw_critcount
-tabstat aw_critcount, by(aw_critcount10) stat(min max N)
 
-logit singleb aw_critcount i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.aw_critcount5 i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.aw_critcount10 i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-*more award decision criteria increase risk of single bidding 
+// sum aw_critcount
+// tabstat aw_critcount, by(aw_critcount10) stat(min max N)
+
+// logit singleb aw_critcount i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.aw_critcount5 i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.aw_critcount10 i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// *more award decision criteria increase risk of single bidding 
 
 gen corr_awcrit=0
 replace corr_awcrit=2 if aw_critcount10>=9
 replace corr_awcrit=1 if aw_critcount10>=4 & aw_critcount10<=7
 replace corr_awcrit=99 if aw_critcount==.
-tab aw_critcount10 corr_awcrit, missing
+// tab aw_critcount10 corr_awcrit, missing
 
-logit singleb i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *ok
 ********************************************************************************
-
 *Winning probability
 
 xtile winprob5=winprob if filter_ok==1, nquantiles(5)
@@ -405,15 +393,15 @@ xtile winprobc10=winprob if filter_ok==1, nquantiles(10)
 replace winprobc10=99 if winprob==.
 replace winprobc10=99 if w_bidnr<3 & w_bidnr!=.
 
-tab winprob5 if filter_ok==1
-tabstat winprob if filter_ok==1, by(winprob5) stat(min mean max N)
-tab winprobc10 if filter_ok==1
-tabstat winprob if filter_ok==1, by(winprobc10) stat(min mean max N)
+// tab winprob5 if filter_ok==1
+// tabstat winprob if filter_ok==1, by(winprob5) stat(min mean max N)
+// tab winprobc10 if filter_ok==1
+// tabstat winprob if filter_ok==1, by(winprobc10) stat(min mean max N)
 
 
-logit singleb winprob i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.winprob5 i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
-logit singleb i.winprobc10 i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb winprob i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.winprob5 i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.winprobc10 i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *as expected, positive relationship
 
 gen corr_wpr=.
@@ -422,69 +410,79 @@ replace corr_wpr=1 if winprobc10>=7 & winprobc10<=8
 replace corr_wpr=2 if winprobc10>=9
 replace corr_wpr=99 if winprobc10==99
 *I keep low winning probabilities as non-risky even if they are significant predictors as theoretically they are unlikely to mean real risk
-tab corr_wpr if filter_ok==1
+// tab corr_wpr if filter_ok==1
 
-logit singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *great
 ********************************************************************************
-
 * Supplier dependence on buyer
 
-tabstat w_ycsh if filter_wproay==1 & w_ynrc>2 & w_ynrc!=., by(singleb) stat(mean sd N)
-ttest w_ycsh if filter_wproay==1 & w_ynrc>2 & w_ynrc!=., by(singleb)
-*negative sign.
-ttest w_ycsh if filter_wproay==1 & w_ynrc>4 & w_ynrc!=., by(singleb)
-*negative sign.
-ttest w_ycsh if filter_wproay==1 & w_ynrc>9 & w_ynrc!=., by(singleb)
+// tabstat w_ycsh if filter_wproay==1 & w_ynrc>2 & w_ynrc!=., by(singleb) stat(mean sd N)
+// ttest w_ycsh if filter_wproay==1 & w_ynrc>2 & w_ynrc!=., by(singleb)
+// *negative sign.
+// ttest w_ycsh if filter_wproay==1 & w_ynrc>4 & w_ynrc!=., by(singleb)
+// *negative sign.
+// ttest w_ycsh if filter_wproay==1 & w_ynrc>9 & w_ynrc!=., by(singleb)
 *negative sign.
 
-reg w_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & w_ynrc>2 & w_ynrc!=., base
-reg w_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
-*mostly works, except nocft, corr_decp
+// reg w_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & w_ynrc>2 & w_ynrc!=., base
+// reg w_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
+// *mostly works, except nocft, corr_decp
 
-hist w_ycsh if filter_ok==1 & filter_wproay==1 & w_ynrc>2 & w_ynrc!=., freq
-hist w_ycsh if filter_ok==1 & filter_wproay==1 & w_ynrc>4 & w_ynrc!=., freq
+// hist w_ycsh if filter_ok==1 & filter_wproay==1 & w_ynrc>2 & w_ynrc!=., freq
+// hist w_ycsh if filter_ok==1 & filter_wproay==1 & w_ynrc>4 & w_ynrc!=., freq
 *not too strong spike at the top
 ********************************************************************************
-
 * Buyer spending concentration
 
-tabstat proa_ycsh if filter_wproay==1 & proa_ynrc>2 & proa_ynrc!=., by(singleb) stat(mean sd N)
-ttest proa_ycsh if filter_wproay==1 & proa_ynrc>2 & proa_ynrc!=., by(singleb)
-*negative, significant
-ttest proa_ycsh if filter_wproay==1 & proa_ynrc>9 & proa_ynrc!=., by(singleb)
-*negative, significant
+// tabstat proa_ycsh if filter_wproay==1 & proa_ynrc>2 & proa_ynrc!=., by(singleb) stat(mean sd N)
+// ttest proa_ycsh if filter_wproay==1 & proa_ynrc>2 & proa_ynrc!=., by(singleb)
+// *negative, significant
+// ttest proa_ycsh if filter_wproay==1 & proa_ynrc>9 & proa_ynrc!=., by(singleb)
+// *negative, significant
 
-reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
-reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
+// reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
+// reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
 *mostly works, except nocft and corr_submp
+********************************************************************************
+save "${country_folder}/`country'_wip.dta", replace
+********************************************************************************
+*New indicators 
 
+*Generate bidder market entry {product_code, year, supplier id, country local macro}
+do "${utility_codes}/gen_bidder_market_entry.do" cpv_div year w_id "`country'"
+
+*Generate market share {bid_price ppp version}
+do "${utility_codes}/gen_bidder_market_share.do" ca_contract_value_ppp 
+
+*Generate is_capital region {`country', buyer_city , one or more nuts variables:buyer_nuts tender_addressofimplementation_n }
+do "${utility_codes}/gen_is_capital.do" "`country'" anb_city anb_region
+
+*Generate bidder is non local {`country', buyer_city bidder_city, buyer_nuts bidder_nuts}
+*no supplier city information
+*do "${utility_codes}/gen_bidder_non_local.do" "`country'" anb_city w_city
+gen bidder_non_local=.
 ********************************************************************************
 
 *Benford's law export
-
+/*
 preserve
-    *rename xxxx buyer_id //buyer id variable
-    *rename xxxx ca_contract_value //bid price variable
     keep if filter_ok==1 
     keep if !missing(ca_contract_value)
     bys anb_id: gen count = _N
     keep if count >100
     keep anb_id ca_contract_value
 	order anb_id ca_contract_value
-    export delimited  $country_folder/buyers_for_R.csv, replace
-    * set directory 
-    ! cd $country_folder
-	//Make sure to change path to the local path of Rscript.exe
-    ! "C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe" $utility_codes/benford.R
+    export delimited  "${country_folder}/buyers_for_R.csv", replace
+    ! "$R_path_local" "${utility_codes}/benford.R" "${country_folder}" 
 restore
 
-merge m:1 anb_id_str using $country_folder/buyers_benford.dta
+merge m:1 anb_id using "${country_folder}/buyers_benford.dta"
 drop _m
 
-br anb_id MAD MAD_conformitiy
-tab MAD_conformitiy, m
-tabstat MAD, by(MAD_conformitiy) stat(min mean max)
+// br anb_id MAD MAD_conformitiy
+// tab MAD_conformitiy, m
+// tabstat MAD, by(MAD_conformitiy) stat(min mean max)
 *Theoretical mad values and conformity
 /*Close conformity — 0.003583 to 0.0058504
 Acceptable conformity — 0.0060427 to 0.0119378
@@ -500,81 +498,75 @@ replace corr_ben = 2 if MAD_conformitiy=="Nonconformity"
 replace corr_ben = 99 if missing(MAD_conformitiy)
 
 *putting back the interaction term(no big change so the above can stay without interaction)
-logit singleb i.corr_ben i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_ben i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 
 gen corr_ben2=0 if corr_ben==2 | corr_ben==0
 replace corr_ben2=1 if corr_ben==1
 replace corr_ben2=99 if corr_ben==. | corr_ben==99
 
-logit singleb i.corr_ben2 i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_ben2 i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 
-reg proa_ycsh singleb i.corr_ben2 i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
+// reg proa_ycsh singleb i.corr_ben2 i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
+*/
 ********************************************************************************
-
-
 * Final best regression and valid red flags
 
-logit singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
+// logit singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft#i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1, base
 *12.24% explanatory power
-reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
-
+// reg proa_ycsh singleb i.corr_wpr i.corr_awcrit i.corr_decp i.corr_submp i.nocft i.corr_proc lca_contract_value i.anb_type i.year i.marketid if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=., base
 ********************************************************************************
-
 * CRI generation
 
-
-sum singleb corr_wpr corr_awcrit corr_decp corr_submp nocft corr_proc proa_ycsh if filter_ok==1
+// sum singleb corr_wpr corr_awcrit corr_decp corr_submp nocft corr_proc proa_ycsh if filter_ok==1
 *few missing for corr_submp and corr_proc
 
-tab singleb if filter_ok==1
-tab corr_wpr if filter_ok==1
-*needs binarisation
-tab corr_awcrit if filter_ok==1
-*needs binarisation
-tab corr_decp if filter_ok==1
-*needs binarisation
-tab corr_submp if filter_ok==1
-*needs binarisation
-tab nocft if filter_ok==1 & corr_proc==1
-tab corr_proc if filter_ok==1
+// tab singleb if filter_ok==1
+// tab corr_wpr if filter_ok==1
+// *needs binarisation
+// tab corr_awcrit if filter_ok==1
+// *needs binarisation
+// tab corr_decp if filter_ok==1
+// *needs binarisation
+// tab corr_submp if filter_ok==1
+// *needs binarisation
+// tab nocft if filter_ok==1 & corr_proc==1
+// tab corr_proc if filter_ok==1
 
-gen corr_wpr_bi=corr_wpr
-replace corr_wpr_bi=corr_wpr/2 if corr_wpr<99
-tab corr_wpr_bi corr_wpr, missing
+// gen corr_wpr_bi=corr_wpr
+// replace corr_wpr_bi=corr_wpr/2 if corr_wpr<99
+// tab corr_wpr_bi corr_wpr, missing
 
-gen corr_awcrit_bi=corr_awcrit
-replace corr_awcrit_bi=corr_awcrit/2 if corr_awcrit<99
-tab corr_awcrit_bi corr_awcrit, missing
+// gen corr_awcrit_bi=corr_awcrit
+// replace corr_awcrit_bi=corr_awcrit/2 if corr_awcrit<99
+// tab corr_awcrit_bi corr_awcrit, missing
 
-gen corr_decp_bi=corr_decp
-replace corr_decp_bi=corr_decp/2 if corr_decp<99
-replace corr_decp_bi=1 if corr_decp==99
-tab corr_decp_bi corr_decp, missing
+gen corr_decp_bi=99
+replace corr_decp_bi=corr_decp/2 if corr_decp!=99
+// tab corr_decp_bi corr_decp
 
-
-gen corr_submp_bi=corr_submp
-replace corr_submp_bi=1 if corr_submp==2
-tab corr_submp_bi corr_submp
+gen corr_subm_bi=99
+replace corr_subm_bi=corr_submp/2 if corr_submp!=99
+// tab corr_subm_bi corr_submp
 
 gen nocft_nocomp=.
 replace nocft_nocomp=0 if nocft==0 & corr_proc==1
 replace nocft_nocomp=1 if nocft==1 & corr_proc==1
-tab nocft nocft_nocomp, missing
+// tab nocft nocft_nocomp, missing
 
 gen proa_ycsh9=proa_ycsh if filter_ok==1 & proa_ynrc>9 & proa_ycsh!=.
-sum proa_ycsh9 proa_ycsh
+// sum proa_ycsh9 proa_ycsh
 
-do $utility_codes/cri.do singleb corr_wpr_bi corr_awcrit_bi corr_decp_bi corr_submp_bi nocft_nocomp corr_proc proa_ycsh9 
+do "${utility_codes}/cri.do" singleb corr_decp_bi corr_subm_bi nocft_nocomp corr_proc proa_ycsh9 
 rename cri cri_cl
 
-sum cri_cl if filter_ok==1
-hist cri_cl if filter_ok==1
-hist cri_cl if filter_ok==1, by(year)
-hist cri_cl if filter_ok==1 & cri_cl>0.5
-hist cri_cl if filter_ok==1 & cri_cl>0.55
-hist cri_cl if filter_ok==1 & cri_cl>0.6, freq
+// sum cri_cl if filter_ok==1
+// hist cri_cl if filter_ok==1
+// hist cri_cl if filter_ok==1, by(year)
+// hist cri_cl if filter_ok==1 & cri_cl>0.5
+// hist cri_cl if filter_ok==1 & cri_cl>0.55
+// hist cri_cl if filter_ok==1 & cri_cl>0.6, freq
 ********************************************************************************
 
-save $country_folder/wb_cri_cl_201124.dta , replace
+save "${country_folder}/`country'_wb_2011.dta", replace
 ********************************************************************************
 *END

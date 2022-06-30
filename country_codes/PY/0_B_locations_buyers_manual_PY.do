@@ -273,4 +273,12 @@ forval s =1/`n_temp'{
 ********************************************************************************
 save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
+* Clean up
+
+erase "${country_folder}/PY_loc_matches1.dta"
+erase "${country_folder}/PY_loc_matches2.dta"
+erase "${country_folder}/PY_no_dup.dta"
+
+
+
 *END

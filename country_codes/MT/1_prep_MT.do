@@ -51,7 +51,6 @@ use "${country_folder}/`country'_wip.dta",clear
 
 gen year = tender_year
 merge m:1 year using "${country_folder}/ppp_data_eu.dta"
-
 *Dropping unmatched ppp years from the using datset
 drop if _m==2 
 // tab year if _m==1, m //2020 no ppp data

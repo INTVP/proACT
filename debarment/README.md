@@ -42,7 +42,7 @@ The countries are cleaned as the following
 3. Non ADB Member Country, Cleaned using Reg-ex Countries pattern
 4. Other `countries_list` (MX,PH,PK,UG)
 
-the cleaned file is stored in [`output/debarrment_cleaned.csv`][debarrment_cleaned]
+the cleaned file is stored in [`output/debarrment_cleaned.csv`][debarment_cleaned]
 
 You can run the R-script from the command line
 
@@ -59,7 +59,8 @@ Rscript --vanilla codes/debarment_prep.R API_KEY
 ## Procurement data
 We have debarment data for a few countries. The list can be found [here][gsheet_debarment]
 
-For each country, you can run the R file [`main.R`][main.R] for one country cleaning.
+For each country, you can run the R file [`collect_bidder_names.R`][collect_bidder_names.R] [`main.R`][main.R] 
+for one country cleaning.
 
 Alternatively you can run the following R script for all countries as a subsystems command in R.
 
@@ -85,6 +86,8 @@ country_names_tuple <-
 for (selected_country in country_names_tuple) {
   country_of_interest <- selected_country[["country"]]
   country_code <- selected_country[["country_code"]]
+  command <- sprintf("Rscript --vanilla codes/collect_bidder_names.R %s", country_code)
+  system(command)
   command <- sprintf("Rscript --vanilla codes/main.R %s %s", country_code, country_of_interest)
   system(command)
 }
@@ -114,19 +117,21 @@ Both sanctioned bidders and procurement bidders are simply matched on one to one
 2. `startDate`: start date of the sanctions
 3. `endDate`: end date of the sanctions
 4. `name`: name of sanctioning authority
-5. `bidder_hasSanction`: boolean, if the bidder has sanctions or not, 100% TRUE as all bidders in this CSV are sanctioned
-6. `bidder_previousSanction`: boolean, If the bidder has more than one sanctions based on var no. 7 "n", then it is TRUE, otherwise it is FALSE.
-7. `n`: the number of rows each sanctioned bidder is appearing, indicating multiple sanctions. 
+5. `legalGrounds`: The sanctioning reason provided in the data
+6. `bidder_hasSanction`: boolean, if the bidder has sanctions or not, 100% TRUE as all bidders in this CSV are sanctioned
+7. `bidder_previousSanction`: boolean, If the bidder has more than one sanctions based on var no. 7 "n", then it is TRUE, otherwise it is FALSE.
+8. `n`: the number of rows each sanctioned bidder is appearing, indicating multiple sanctions. 
 
 **The sanctions are converted into a JSON object added to the `XX_mod_ind.csv` to be converted into JSON. The codes handling this is [here][schema] and the schema describing the structure can be found [here][indicators_json].**
 
-[schema]: /CSV_to_JSON/validation_node.js/schemas/tender.schema.json
-[indicators_json]: /CSV_to_JSON/reverse-flatten-tool_v1.1.2/indicators_json.py
+[schema]: /csv_to_json/validation_node/schemas/tender.schema.json
+[indicators_json]: /csv_to_json/indicators_json.py
 [json_to_csv]: /debarment/codes/json_to_csv.py
 [debarment_prep]: /debarment/codes/debarment_prep.R
 [main.R]: /debarment/codes/main.R
 [gsheet_debarment]: https://docs.google.com/spreadsheets/d/1K0gpBwKqpFy5DgQyFVikx9aILUsMRnArbi5oV4d1xEI/edit?usp=sharing
 [codes]: /debarment/codes/
-[company_legalforms]: debarment/data_raw/supplementary/company_legalforms.xlsx
-[r_cmd_add.bat]: debarment/codes/r_cmd_add.bat
-[debarrment_cleaned]: debarment/output/debarrment_cleaned.csv
+[company_legalforms]: /debarment/configuration/company_legalforms.xlsx
+[r_cmd_add.bat]: /debarment/codes/r_cmd_add.bat
+[debarment_cleaned]: /debarment/output/debarrment_cleaned.csv
+[collect_bidder_names.R]: /debarment/codes/collect_bidder_names.R

@@ -1,43 +1,51 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that uses the tender/contract titles to find the
  relvent cpv code using token string matching*/
 ********************************************************************************
-
-*Data
-*Using dataset coming out of 0_A_cpv_manual_ID.R - dfid_indonesia_cricpv200708.csv
-
-import delimited using $country_folder/dfid_indonesia_cricpv200708.csv, encoding(UTF-8) clear
+*Merge the results from R script
+// import delimited using "${country_folder}/ID_cpv_R.csv", encoding(UTF-8) clear
+// rename ten_title_orig ten_title
+// duplicates drop ten_id ten_title, force
+// drop if missing(cpv_code)
+// drop ten_title
+// save "${country_folder}/ID_cpv_R.dta", replace
 ********************************************************************************
+*Data
+use  "${utility_data}/country/`country'/starting_data/dfid2_cri_id_200102.dta", clear
 
-br ten_title_orig ten_title 
-decode ten_title_orig, gen (ten_title_str)
-sort ten_title_str
-br ten_title_str cpv_code
+// br ten_title_orig ten_title 
+decode ten_title, gen (ten_title_str)
+cap drop ten_title
+rename ten_title_str ten_title
 
+decode ten_id, gen (ten_id_str)
+cap drop ten_id
+rename ten_id_str ten_id
+
+// sort ten_title
+cap drop _m
+
+merge m:1 ten_id using "${country_folder}/ID_cpv_R.dta", keep(1 3) 
+drop _m
+
+// br ten_title_str cpv_code
 rename cpv_code cpv_code_manual
 ************************************
-
 *counts
-unique ten_title_str   // from original titles 638,762
-unique ten_title_str if !missing(cpv_code_manual)  //Nori found cpvs for 321,357
-unique ten_title_str if missing(cpv_code_manual)  //Missing cpvs for 317,405
+// unique ten_title_str   // from original titles 638,762
+// unique ten_title_str if !missing(cpv_code_manual)  //Nori found cpvs for 321,357
+// unique ten_title_str if missing(cpv_code_manual)  //Missing cpvs for 317,405
 
 *missing rate
-count if missing(cpv_code_manual)
-local product_code = `r(N)'/_N
-di `product_code'  //50.3%
+// count if missing(cpv_code_manual)
+// local product_code = `r(N)'/_N
+// di `product_code'  //50.3%
 ************************************
 
 *Step 1: Cleaning tender title
 
-gen ten_description_edit = ten_title_str
+gen ten_description_edit = ten_title
 keep if ten_description_edit!="NA" 
 keep if ten_description_edit!="" 
 replace ten_description_edit=lower(ten_description_edit)
@@ -126,28 +134,27 @@ forval s =1/`n_temp'{
 replace ten_description_edit = stritrim(ten_description_edit)
 replace ten_description_edit = strtrim(ten_description_edit)
 format ten_description_edit ten_title_str  %40s
-br ten_description_edit ten_title_str
+// br ten_description_edit ten_title_str
 ************************************
-
-unique ten_description_edit
-unique ten_title_str
+// unique ten_description_edit
+// unique ten_title_str
 
 egen unqiue_id=group(ten_description_edit)
 sort unqiue_id
-save $country_folder/ID_ten_full.dta, replace
+save "${country_folder}/ID_ten_full.dta", replace
 
 keep unqiue_id ten_description_edit cpv_code_manual
 keep if missing(cpv_code_manual)
 drop cpv_code_manual
 duplicates drop ten_description_edit, force
-unique  ten_description_edit
-unique unqiue_id
-save $country_folder/ID_ten_cleaned_nodup.dta, replace
+// unique  ten_description_edit
+// unique unqiue_id
+save "${country_folder}/ID_ten_cleaned_nodup.dta", replace
 
 ********************************************************************************
 *Preparing cpv data
 clear all
-import delimited $utility_data/country/ID/CPV_list_indonesian.csv, clear varnames(1)
+import delimited "${utility_data}/country/ID/CPV_list_indonesian.csv", clear varnames(1)
 drop cpv_descr
 *rename cpv_desc_id cpv_descr
 rename cpv_desc_id_google cpv_descr
@@ -169,7 +176,7 @@ foreach v of local stop {
  replace cpv_descr = subinstr(cpv_descr, "`v'", "",.)
 }
  
-charlist cpv_descr 
+// charlist cpv_descr 
 
 /*Identifying common words to drop from list
 freqindex cpv_descr, simil(token)
@@ -188,21 +195,20 @@ replace cpv_descr = stritrim(cpv_descr)
 replace cpv_descr = strtrim(cpv_descr)
 drop if missing(cpv_descr)
 	
-unique code
+// unique code
 keep code cpv_descr
 duplicates drop cpv_descr , force
-save $utility_data/country/ID/cpv_code.dta, replace
+save "${utility_data}/country/ID/cpv_code.dta", replace
 ********************************************************************************
-
 *Step 2: Matching
 
-use $country_folder/ID_ten_cleaned_nodup.dta, clear
-matchit unqiue_id ten_description_edit using $utility_data/country/ID/cpv_code.dta , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(minsimple) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
+use "${country_folder}/ID_ten_cleaned_nodup.dta", clear
+matchit unqiue_id ten_description_edit using "${utility_data}/country/ID/cpv_code.dta" , idusing(code) txtusing(cpv_descr) sim(token) w(root) score(minsimple) g(simil_token) stopw swt(0.9) time flag(10) t(0.5) over  
 *scoring minsimple gives a match of 1 if small word exist in long text. - creates many matches 870k
 
 gsort - simil_token
 format ten_description_edit cpv_descr %50s
-br ten_description_edit cpv_descr simil_token
+// br ten_description_edit cpv_descr simil_token
 
 *keeping score == 1
 keep if simil_token==1
@@ -219,11 +225,11 @@ forvalues i = 1/`r(max)' {
  replace code_new ="`r(levels)'" if group == `i' & missing(code_new)
  }
 format code_new %20s
-br unqiue_id group ten_description_edit code_new
+// br unqiue_id group ten_description_edit code_new
 
 tostring code,gen(code_str)
 replace code_new = code_str if missing(code_new)
-br unqiue_id group ten_description_edit code*
+// br unqiue_id group ten_description_edit code*
 gen code_new2 = code_new
 format code_new2 %20s
 replace code_new2 = stritrim(code_new2)
@@ -235,8 +241,8 @@ duplicates drop unqiue_id, force
 drop simil_token count group code_new code code_str 
 rename code_new2 cpv_code
 ********************************************************************************
-
 *Trying to determine the most frequent cpv
+
 split cpv_code, p(,)
 forvalues i =1/35{
 replace cpv_code`i'=substr(cpv_code`i',1,2)
@@ -248,42 +254,40 @@ drop if missing(cpv_code)
 rename cpv_code_new z
 bys unqiue_id cpv_code: gen x=_N
 bys unqiue_id : gen y=_N
-br unqiue_id cpv_code y z x  if y>1
+// br unqiue_id cpv_code y z x  if y>1
 gsort unqiue_id -x
 drop z
 bys unqiue_id: gen z=_n
 keep if z ==1
 drop x y z
-br 
+
 rename cpv_code cpv_code_main
 drop cpv_descr
 
 *Then filtering based on length
 *gen len=length(ten_description_edit)
 
-save $country_folder/matches.dta, replace
+save "${country_folder}/matches.dta", replace
 ********************************************************************************
-
 *Merging back with full dataset
-use $country_folder/ID_ten_full.dta, replace
-merge m:1 unqiue_id using $country_folder/matches.dta, generate(_m)
+
+use "${country_folder}/ID_ten_full.dta", replace
+merge m:1 unqiue_id using "${country_folder}/matches.dta", generate(_m)
 drop _m
-br ten_title_orig ten_description_edit ten_title_str cpv_code_manual cpv_code_main cpv_code_full
+// br ten_title_orig ten_description_edit ten_title_str cpv_code_manual cpv_code_main cpv_code_full
 
 gen cpv_code_matchit = cpv_code_main + "000000" if !missing(cpv_code_main)
 gen comma = regex(cpv_code_full,",")
 replace cpv_code_matchit = cpv_code_full if comma!=1
 drop comma
 destring cpv_code_matchit, replace
-br cpv_code_manual cpv_code_matchit
+// br cpv_code_manual cpv_code_matchit
 replace cpv_code_manual=0 if missing(cpv_code_manual)
 replace cpv_code_matchit=0 if missing(cpv_code_matchit)
 gen cpv_code = cpv_code_manual+cpv_code_matchit
 replace cpv_code=. if cpv_code==0
-drop ten_title ten_description_edit cpv_code_manual unqiue_id cpv_code_main cpv_code_matchit
-
+drop ten_description_edit cpv_code_manual unqiue_id cpv_code_main cpv_code_matchit
 ********************************************************************************
-
 *Fixing the cpv code
 
 format  cpv_code %24.0g
@@ -304,10 +308,10 @@ gen cpv_code2=substr(cpv_code,1,8)
 rename cpv_code cpv_code_ver
 rename cpv_code2 cpv_code
 
-merge m:1 cpv_code using $utility_data/country/ID/cpv_str_9.dta, gen(match_9)
+merge m:1 cpv_code using "${utility_data}/country/ID/cpv_str_9.dta", gen(match_9)
 drop if match_9==2
 
-merge m:1 cpv_code using $utility_data/country/ID/cpv_str_8.dta, gen(match_8)
+merge m:1 cpv_code using "${utility_data}/country/ID/cpv_str_8.dta", gen(match_8)
 drop if match_8==2
 
 replace cpv_code=cpv_code_full if match_8==1 & match_9==1 & !missing(cpv_code_full)
@@ -335,11 +339,11 @@ rename cpv_code1 cpv_code
 
 replace cpv_code="0" + cpv_code if match_8==1 & match_9==1 & !missing(cpv_code)
 
-br  *cpv* *title* match_8 match_9 if match_8==1 & match_9==1 & !missing(cpv_code)
+// br  *cpv* *title* match_8 match_9 if match_8==1 & match_9==1 & !missing(cpv_code)
 drop match_9 match_8 cpv_code_ver 
 *cpv_code now contains the best cpv code -  harmonized
 
 ********************************************************************************
-save $country_folder/ID_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

@@ -41,3 +41,16 @@ GTI-Data-Pipeline.Rproj
 
 # Stata dta files
 .dta
+
+# Data folder
+utility_data/country/
+
+# Ignored folders & files
+tests/
+fixes_summary.xlsx
+code_structure.xlsx
+country_codes/*/*.csv
+country_codes/*/*.dta
+country_codes/*/*/*/*.dta
+
+.ipynb_checkpoints/fix_do_files-checkpoint.ipynb

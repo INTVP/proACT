@@ -1,26 +1,18 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script runs the risk indicator models to identify risk thresholds.*/
 ********************************************************************************
-
 *Data
-use $country_folder/MX_wip.dta, clear
+
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
 *Note - The compiled dataset was used for an earlier project - most of the data preperation work such as renaming variables where done in an older script. I will copy here all the relevent parts of the script and leave them commented
 *The parts that are not commented are relevent for the ProAct project
 ********************************************************************************
-
 *(Re)Checking indicators
 *Used same calculated variables from older script
-desc *corr* singleb nocft *tax* *csh* *cri*
+// desc *corr* singleb nocft *tax* *csh* *cri*
 ********************************************************************************
-
 *Single bidding
 
 *From older code - do not run this section
@@ -36,7 +28,7 @@ replace singleb=0 if ca_nrbid>1 & ca_nrbid!=.
 tab singleb
 lab var singleb "single-bid red flag"
 */
-tab singleb, m
+// tab singleb, m
 ********************************************************************************
 *Procedure type
 
@@ -110,10 +102,10 @@ tab ca_procedure_nat corr_proc if filter_ok==1
 tab corr_proc ca_procedure_form if filter_ok==1
 */
 
-tab corr_proc, m
-tab corr_proc_bi, m
+// tab corr_proc, m
+// tab corr_proc_bi, m
 
-logit singleb  i.corr_proc  ca_contract_value100 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
+// logit singleb  i.corr_proc  ca_contract_value100 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
 ********************************************************************************
 *Adv/Submission period
 
@@ -139,12 +131,11 @@ tab submp25 corr_submp, missing
 tabstat submp if filter_ok==1, by(corr_submp) stat(min mean max N)
 
 */
-tab corr_submp, m
+// tab corr_submp, m
 
 
-logit singleb i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base
+// logit singleb i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base
 ********************************************************************************
-
 *No cft
 
 *From older code - do not run this section
@@ -158,8 +149,8 @@ replace nocft=. if yescft==.
 tab nocft, missing
 */
 
-tab nocft, m
-logit singleb  i.nocft i.corr_proc  ca_contract_value100 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base
+// tab nocft, m
+// logit singleb  i.nocft i.corr_proc  ca_contract_value100 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base
 ********************************************************************************
 
 *Decision period
@@ -182,11 +173,10 @@ replace corr_decp=99 if decp==.
 tab decp25 corr_decp, missing
 */
 
-tab corr_decp, m
-tab corr_decp_bi, m
-logit singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base 
+// tab corr_decp, m
+// tab corr_decp_bi, m
+// logit singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base 
 ********************************************************************************
-
 *Contract Share
 
 *From older code - do not run this section
@@ -233,17 +223,16 @@ sum w_mycsh if filter_wy==1 & w_ynrc>9 & proa_ynrc!=.
 *spectacularly high values, huge concentration, probably represents the great concentration of buying power, few large ministries and a large supplier pool
 */
 
-br w_ycsh w_mycsh proa_ycsh proa_mycsh  w_ycsh
-
-reg w_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>2 & w_ynrc!=., base
-*singleb, nocft, corr_proc work
-reg w_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
-*nocft and corr_proc work
+// br w_ycsh w_mycsh proa_ycsh proa_mycsh  w_ycsh
+//
+// reg w_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>2 & w_ynrc!=., base
+// *singleb, nocft, corr_proc work
+// reg w_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
+// *nocft and corr_proc work
 *Using contract share from supplier side
 gen w_ycsh4=w_ycsh if filter_ok==1 & w_ynrc>4 & w_ycsh!=.
 *use : w_ycsh4
 ********************************************************************************
-
 *Trying the buyer side calc
 
 *From older code - do not run this section
@@ -287,17 +276,16 @@ gen proa_ycsh9=proa_ycsh if filter_ok==1 & proa_ynrc>9 & proa_ynrc!=.
 sum proa_ycsh9 proa_ycsh
 */
 
-br w_ycsh w_mycsh proa_ycsh proa_mycsh  w_ycsh
-reg proa_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>2 & proa_ynrc!=., base
-*nocft, corr_proc work
-reg proa_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
-*nocft and corr_proc work
+// br w_ycsh w_mycsh proa_ycsh proa_mycsh  w_ycsh
+// reg proa_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>2 & proa_ynrc!=., base
+// *nocft, corr_proc work
+// reg proa_ycsh i.singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
+// *nocft and corr_proc work
 gen proa_ycsh4=proa_ycsh if filter_ok==1 & proa_ynrc>4 & proa_ycsh!=.
-
 ********************************************************************************
 
 *Tax haven
-desc *tax*
+// desc *tax*
 
 *From older code - do not run this section
 /*
@@ -320,20 +308,18 @@ lab var taxhav2 "Tax haven supplier, missing = 0 (time varying)"
 tab taxhav2, missing
 */
 
-tab taxhav, m
-tab taxhav2, m  //use this
+// tab taxhav, m
+// tab taxhav2, m  //use this
 
 gen fsuppl2= fsuppl
 replace fsuppl2 = 2 if fsuppl==1 & taxhav==1
-tab fsuppl2 if filter_ok==1, m
-bys fsuppl2: tab singleb, m
-br ca_nrbid if fsuppl2==1 //no singleb information for suppliers in tax haven 
+// tab fsuppl2 if filter_ok==1, m
+// bys fsuppl2: tab singleb, m
+// br ca_nrbid if fsuppl2==1 //no singleb information for suppliers in tax haven 
 
-logit singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
+// logit singleb i.fsuppl2 i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
 * Tax haven can't be validated so it won't be included in cri
-
 ********************************************************************************
-
 *Cost Overrun
 
 *From older code - do not run this section
@@ -348,47 +334,57 @@ sum overrun roverrun
 hist roverrun
 */
 
-desc *overrun*
-hist  overrun
-br overrun roverrun if !missing(overrun)
-hist roverrun if !missing(roverrun)
-
+// desc *overrun*
+// hist  overrun
+// br overrun roverrun if !missing(overrun)
+// hist roverrun if !missing(roverrun)
 ********************************************************************************
+*New indicators market entry 
+*Generate bidder market entry {product_code, year, supplier id, country local macro}
+tostring w_id, replace
+do "${utility_codes}/gen_bidder_market_entry.do" cpv year w_id "`country'"
 
+*Generate market share {bid_price ppp version}
+do "${utility_codes}/gen_bidder_market_share.do" ca_contract_value_ppp 
+
+*Generate is_capital region {`country', buyer_city , one or more nuts variables:buyer_nuts tender_addressofimplementation_n }
+do "${utility_codes}/gen_is_capital.do" "`country'" buyer_state_api
+local country "MX"
+
+*Generate bidder is non local {`country', buyer_city bidder_city, buyer_nuts bidder_nuts}
+*do "${utility_codes}/gen_bidder_non_local.do" "`country'" buyer_city bidder_city buyer_nuts bidder_nuts
+*No bidder location
+gen bidder_non_local = .
+********************************************************************************
 *Benford's
-count if missing(anb_id)
-count if missing(anb_id2)
-unique anb_id
-unique anb_id2
-br anb_id anb_id2
-sort anb_id2
-br anb_id2 anb_name  //use anb_id2
-sum ca_contract_value
-save $country_folder/MX_wip.dta, replace
 
-*********************************
+// br buyer_name  buyer_id buyer_masterid
+tostring anb_id2, replace
+save "${country_folder}/`country'_wip.dta", replace
+
 preserve
     rename anb_id2 buyer_id //buyer id variable
     *rename xxxx ca_contract_value //bid price variable
     keep if filter_ok==1 
     keep if !missing(ca_contract_value)
+	keep if !missing(buyer_id)
     bys buyer_id: gen count = _N
     keep if count >100
-	drop count
     keep buyer_id ca_contract_value
 	order buyer_id ca_contract_value
-    export delimited  $country_folder/buyers_for_R.csv, replace
-    * set directory 
-    ! cd $country_folder
-	//Make sure to change path to the local path of Rscript.exe
-    ! "C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe" $utility_codes/benford.R
+	export delimited  "${country_folder}/buyers_for_R.csv", replace
+	! "${R_path_local}" "${utility_codes}/benford.R" "${country_folder}"
 restore
-*********************************
-
-gen buyer_id = anb_id2
-merge m:1 buyer_id using $country_folder/buyers_benford.dta
-drop _m buyer_id
-br anb_id2 MAD MAD_conformitiy
+************************************************
+use "${country_folder}/buyers_benford.dta", clear
+tostring buyer_id, replace
+rename buyer_id anb_id2
+save "$country_folder/buyers_benford.dta", replace
+************************************************
+use "${country_folder}/`country'_wip.dta", clear
+merge m:1 anb_id2 using "${country_folder}/buyers_benford.dta"
+drop if _m==2
+drop _m
 
 cap drop corr_ben
 gen corr_ben = .
@@ -397,62 +393,56 @@ replace corr_ben = 1 if MAD_conformitiy=="Marginally acceptable conformity"
 replace corr_ben = 2 if MAD_conformitiy=="Nonconformity"
 replace corr_ben = 99 if missing(MAD_conformitiy)
 
-logit singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc i.taxhav2 i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  //corr_ben is valid
+// logit singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc i.taxhav2 i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  //corr_ben is valid
 ********************************************************************************
-
 *Final best regressions
 
-logit singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
-
-reg w_ycsh i.singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
-
-
-reg proa_ycsh i.singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
-
+// logit singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1, base  
+//
+// reg w_ycsh i.singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & w_ynrc>4 & w_ynrc!=., base
+//
+//
+// reg proa_ycsh i.singleb i.corr_ben i.corr_decp i.corr_submp  i.nocft i.corr_proc  i.ca_contract_value10 anb_location i.anb_type i.year i.ca_type i.w_sector if filter_ok==1 & proa_ynrc>4 & proa_ynrc!=., base
 ********************************************************************************
-save $country_folder/MX_wip.dta, replace
-********************************************************************************
-use $country_folder/MX_wip.dta, clear
-
 *Calculate CRI
+
 drop cri*
 *CRI generation
-sum singleb corr_proc corr_submp corr_decp  nocft corr_ben w_ycsh  if filter_ok==1
-tab singleb, m
-tab corr_proc, m  //turn into binary
-tab corr_submp, m //turn into binary
-tab corr_decp, m //turn into binary
-tab nocft, m
-tab taxhav2, m  //out of cri
-tab corr_ben, m //turn into binary
-tab w_ycsh, m
+// sum singleb corr_proc corr_submp corr_decp  nocft corr_ben w_ycsh  if filter_ok==1
+// tab singleb, m
+// tab corr_proc, m  //turn into binary
+// tab corr_submp, m //turn into binary
+// tab corr_decp, m //turn into binary
+// tab nocft, m
+// tab taxhav2, m  //out of cri
+// tab corr_ben, m //turn into binary
+// tab w_ycsh, m
 
-*gen corr_submp_bi=99
-*replace corr_submp_bi=corr_submp/2 if corr_submp!=99
-tab corr_submp_bi corr_submp
+// gen corr_submp_bi=99
+// replace corr_submp_bi=corr_submp/2 if corr_submp!=99
+// tab corr_submp_bi corr_submp
 
-*gen corr_proc_bi=99
-*replace corr_proc_bi=corr_proc/2 if corr_proc!=99
-tab corr_proc_bi corr_proc, m
+// gen corr_proc_bi=99
+// replace corr_proc_bi=corr_proc/2 if corr_proc!=99
+// tab corr_proc_bi corr_proc, m
 
-tab corr_decp_bi corr_decp, m
+// tab corr_decp_bi corr_decp, m
 
-tab  corr_ben, m
+// tab  corr_ben, m
 gen corr_ben_bi=99
 replace corr_ben_bi=corr_ben/2 if corr_ben!=99
-tab corr_ben_bi corr_ben, m
+// tab corr_ben_bi corr_ben, m
 
 *gen w_ycsh4=w_ycsh if filter_ok==1 & w_ynrc>4 & w_ycsh!=.
-sum w_ycsh4 w_ycsh
+// sum w_ycsh4 w_ycsh
 
-do $utility_codes/cri.do  singleb corr_proc_bi corr_submp_bi corr_decp_bi corr_ben_bi nocft  proa_ycsh4
+do "${utility_codes}/cri.do"  singleb corr_proc_bi corr_submp_bi corr_decp_bi corr_ben_bi nocft  proa_ycsh4 
 rename cri cri_mx
 
-
-sum cri_mx if filter_ok==1
-hist cri_mx if filter_ok==1
+// sum cri_mx if filter_ok==1
+// hist cri_mx if filter_ok==1
 ********************************************************************************
 
-save $country_folder/MX_171020.dta , replace
+save "${country_folder}/`country'_wb_2011.dta", replace
 ********************************************************************************
 *END

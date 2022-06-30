@@ -1,0 +1,320 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tender",
+  "description": "tender object",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "country": { "$ref": "#/definitions/country" },
+    "awardDecisionDate": { "$ref": "#/definitions/date" },
+    "contractSignatureDate": { "$ref": "#/definitions/date" },
+    "awardDeadline": { "$ref": "#/definitions/date" },
+    "bidDeadline": { "$ref": "#/definitions/date" },
+    "addressOfImplementation": { "$ref": "#/definitions/address" },
+    "procedureType": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "RESTRICTED",
+        "NEGOTIATED_WITH_PUBLICATION",
+        "NEGOTIATED_WITHOUT_PUBLICATION",
+        "COMPETITIVE_DIALOG",
+        "DESIGN_CONTEST",
+        "MINITENDER",
+        "DPS_PURCHASE",
+        "OUTRIGHT_AWARD",
+        "APPROACHING_BIDDERS",
+        "PUBLIC_CONTEST",
+        "NEGOTIATED",
+        "INOVATION_PARTNERSHIP",
+        "CONCESSION",
+        "OTHER",
+        "FORCE_ACCOUNT",
+        "INTERNATIONAL_COMPETITIVE_BIDDING",
+        "INTERNATIONAL_SHOPPING",
+        "LEAST_COST_SELECTION",
+        "LIMITED_INTERNATIONAL_BIDDING",
+        "NATIONAL_COMPETITIVE_BIDDING",
+        "QUALITY_AND_COST_BASED_SELECTION",
+        "QUALITY_BASED_SELECTION",
+        "SERVICE_DELIVERY_CONTRACTS",
+        "SINGLE_SOURCE_SELECTION",
+        "SELECTION_BASED_ON_CONSULTANTS_QUALIFICATION",
+        "DC",
+        "ICB",
+        "NCB"
+      ]
+    },
+	"nationalProcedureType": {
+	      "type": "string"
+		  },
+
+    "supplyType": {
+      "type": "string",
+      "enum": [
+        "WORKS",
+        "SUPPLIES",
+        "SERVICES"
+      ]
+    },
+    "productCodes": { "$ref": "#/definitions/productCodes" },
+    "publications": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/publication" }
+    },
+    "buyers": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/body" },
+      "minItems": 0
+    },
+    "lots": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/lot" },
+      "minItems": 1
+    }
+  },
+  "required": ["id", "lots"],
+  "definitions": {
+    "country": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 2
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "country": { "$ref": "#/definitions/country" },
+        "geoCodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "productCodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "minItems": 1
+    },
+    "bodyId": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ETALON_ID",
+            "BVD_ID",
+            "VAT",
+            "ORGANIZATION_ID",
+            "HEADER_ICO",
+            "TAX_ID",
+            "TRADE_REGISTER",
+            "STATISTICAL",
+            "SOURCE_ID"
+          ]
+        },
+        "scope": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "price": {
+      "type": "object",
+      "properties": {
+        "netAmount": { "type": "number" },
+        "currency": { "type": "string" },
+        "netAmountNational": { "type": "number" },
+        "currencyNational": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "sanction": {
+      "type": "object",
+      "properties": {
+        "startDate": { "$ref": "#/definitions/date" },
+        "endDate": { "$ref": "#/definitions/date" },
+        "source": { "$ref": "#/definitions/url" },
+        "sanctioningAuthority": { "$ref": "#/definitions/body" },
+        "legalGround": { "type": "string" },
+        "fine": { "$ref": "#/definitions/price" },
+        "sanctionDurationinDays": { "type": "integer" },
+        "lastUpdated": { "$ref": "#/definitions/date" },
+        "sanctionSourceId": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "body": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "address": { "$ref": "#/definitions/address" },
+        "name": {
+          "type": "string"
+        },
+        "bodyIds": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/bodyId" }
+        },
+        "buyerType": {
+          "type": "string",
+          "enum": [
+            "NATIONAL_AUTHORITY",
+            "NATIONAL_AGENCY",
+            "REGIONAL_AUTHORITY",
+            "REGIONAL_AGENCY",
+            "PUBLIC_BODY",
+            "EUROPEAN_AGENCY",
+            "OTHER",
+            "UTILITIES"
+          ]
+        },
+        "mainActivities": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "GENERAL_PUBLIC_SERVICES",
+                  "SOCIAL_PROTECTION",
+                  "EDUCATION",
+                  "HEALTH",
+                  "ENVIRONMENT",
+                  "PUBLIC_ORDER_AND_SAFETY",
+                  "HOUSING_AND_COMMUNITY_AMENITIES",
+                  "DEFENCE",
+                  "ECONOMIC_AND_FINANCIAL_AFFAIRS",
+                  "RECREATION_CULTURE_AND_RELIGION",
+                  "GAS_AND_HEAT_PRODUCTION",
+                  "GAS_AND_OIL_EXTRACTION",
+                  "COAL_AND_OTHER_EXTRACTION",
+                  "ELECTRICITY",
+                  "WATER",
+                  "POSTAL",
+                  "RAILWAY",
+                  "URBAN_TRANSPORT",
+                  "PORT",
+                  "AIRPORT",
+                  "OTHER"
+                ]
+              },
+              {
+                "type": "string",
+                "maxLength": 0
+              }
+            ]
+          }
+        },
+        "hasSanction": { "type": "boolean" },
+        "previousSanction": { "type": "boolean" },
+        "sanctionGrounds": { "type": "string" },
+        "sanctions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/sanction" }
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "publicationDate": { "$ref": "#/definitions/date" },
+        "humanReadableURL": { "$ref": "#/definitions/url" },
+        "source": { "$ref": "#/definitions/url" }
+      },
+      "additionalProperties": true
+    },
+    "bid": {
+      "type": "object",
+      "properties": {
+        "bidders": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/body" }
+        },
+        "price": { "$ref": "#/definitions/price" },
+        "isWinning": { "type": "boolean" }
+      },
+      "required": ["bidders"],
+      "additionalProperties": true
+    },
+    "indicator": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["type", "value"],
+      "additionalProperties": true
+    },
+    "lot": {
+      "type": "object",
+      "properties": {
+        "addressOfImplementation": { "$ref": "#/definitions/address" },
+        "bids": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/bid" }
+        },
+        "productCodes": { "$ref": "#/definitions/productCodes" },
+        "indicators": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/indicator" }
+        },
+        "title": { "type": "string" },
+        "awardDecisionDate": { "$ref": "#/definitions/date" },
+        "contractSignatureDate": { "$ref": "#/definitions/date" },
+        "estimatedStartDate": { "$ref": "#/definitions/date" },
+        "estimatedCompletionDate": { "$ref": "#/definitions/date" },
+        "bidsCount": { "type": "integer" },
+        "estimatedPrice": { "$ref": "#/definitions/price" },
+        "advertisementPeriodLength": { "type": "integer" },
+        "decisionPeriodLength": { "type": "integer" },
+        "isCapital": { "type": "boolean"}
+      },
+      "required": ["bids", "productCodes", "indicators"],
+      "additionalProperties": true
+    }
+  }
+}

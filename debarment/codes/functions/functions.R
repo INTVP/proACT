@@ -106,7 +106,7 @@ clean_countries <- function(.data) {
   #'
   #' @examples
   function_name <- 'clean_countries'
-  .data = countries
+  .data <- countries
   logger::log_info("{function_name}: cleaning countries...")
   countries$entity.address.country.clean[grepl(
     'brazil',

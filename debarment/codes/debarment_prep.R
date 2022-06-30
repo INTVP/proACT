@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
-args = commandArgs(trailingOnly = TRUE)
+args <- commandArgs(trailingOnly = TRUE)
 if (length(args) == 0) {
-  stop("HREE_API_KEY must be supplied", call. = FALSE)
+  stop("HERE_API_KEY must be supplied", call. = FALSE)
 } else {
   message("running debarment data cleaning")
 }
@@ -16,6 +16,7 @@ library(stringi, warn.conflicts = F, quietly = T) # string cleaning
 library(logger, warn.conflicts = F, quietly = T) # logging
 library(properties, warn.conflicts = F, quietly = T) # read system properties
 library(snakecase, warn.conflicts = F, quietly = T) # fix column nameslibrary(dplyr) # data wrangling
+library(magrittr, warn.conflicts = F, quietly = T)
 # Global variables ----
 function_name <- "debarment_prep"
 api_key <- args[1]

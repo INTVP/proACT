@@ -1,43 +1,75 @@
+args = commandArgs(trailingOnly=TRUE)
+setwd(args[1])
+utility_data = args[2]
 
-#Libraries 
-library(haven)
-library(readxl)
-library(stringr)
-library(tm)
-library(dplyr)
-library(data.table)
-library(tokenizers)
+# Packages 
+# Load and Install libraries ----
 
-#Setting Paths
-getwd()
-country_folder = getwd()
-setwd('..')
-setwd('..')
-utility_codes = paste0(getwd(),"/utility_codes/")
-utility_data = paste0(getwd(),"/utility_data/")
+# FIRST: check if pacman is installed. 
+# This package installs and loads other packages
+if (!require(pacman)) {
+  install.packages("pacman", dependencies = TRUE)
+}
+
+# SECOND: list all other packages that will be used
+# Add libraries as needed here.
+# Please also add the reason why this library is added
+packages <- c(
+  "haven", 
+  "readxl", 
+  "stringr", 
+  "tm", 
+  "tidyverse",
+  "data.table",
+  "tokenizers"
+)  
+
+# THIRD: installing and loading the packages
+# The following lines checks if the libraries are installed.
+# If installed, they will be loaded.
+# If not, they will be installed then loaded.
+p_load(
+  packages, 
+  character.only = TRUE, 
+  depencies = TRUE
+)
+
+options(warn=0) # suppress warnings OFF
+
+#Loading data 
+health <-
+  read.csv(
+    paste0(utility_data, "/country/UG/health_termsRN.csv"),
+    header = TRUE,
+    sep = ","
+  )
+df <- data.table::fread(
+  paste0(utility_data,"/country/ID/ID_ten_title.csv"),
+  header = TRUE,
+  keepLeadingZeros = TRUE,
+  encoding = "UTF-8",
+  stringsAsFactors = FALSE,
+  showProgress = TRUE,
+  na.strings = c("", "-", "NA"),
+  fill = TRUE
+)
+
+df <- df %>% select(c('ten_id','ten_title'))
+gc()
+
+# df$check <- ifelse(grepl(paste(health$health_term, collapse = "|"), df$ten_title), 1,0)
 
 
-#Loading datasts
-
-health <- read.csv(paste0(utility_data,"country/ID/health_termsRN.csv"), header = TRUE, sep = ";")
-df <- read_stata(
-  paste0(utility_data,"country/ID/starting_data/dfid2_cri_id_200102.dta"),
-  encoding = "UTF8")
-
-
-df$check <- ifelse(grepl(paste(health$health_term, collapse = "|"), df$ten_title), 1,0)
-
-
-df$cpv1 <- ifelse(grepl("jasa", df$ten_title) | grepl("dinas", df$ten_title) | grepl("konsultan", df$ten_title)  | grepl("pelayanan", df$ten_title) | grepl("pengawasan", df$ten_title) | grepl("supervisi", df$ten_title) , "S",NA)
-df$cpv1 <- ifelse(grepl("peralatan", df$ten_title) | grepl("mesin", df$ten_title) | grepl("barang", df$ten_title)  | grepl("kendaraan", df$ten_title), "G",df$cpv1)
-df$cpv1 <- ifelse(grepl("kerja", df$ten_title) | grepl("pembuatan", df$ten_title) | grepl("pemeliharaan", df$ten_title), "W",df$cpv1)
+# df$cpv1 <- ifelse(grepl("jasa", df$ten_title) | grepl("dinas", df$ten_title) | grepl("konsultan", df$ten_title)  | grepl("pelayanan", df$ten_title) | grepl("pengawasan", df$ten_title) | grepl("supervisi", df$ten_title) , "S",NA)
+# df$cpv1 <- ifelse(grepl("peralatan", df$ten_title) | grepl("mesin", df$ten_title) | grepl("barang", df$ten_title)  | grepl("kendaraan", df$ten_title), "G",df$cpv1)
+# df$cpv1 <- ifelse(grepl("kerja", df$ten_title) | grepl("pembuatan", df$ten_title) | grepl("pemeliharaan", df$ten_title), "W",df$cpv1)
 
 
 df$ten_title_orig <- df$ten_title
 
 df$ten_title <- as.character(df$ten_title)
 df$ten_title <- str_squish(df$ten_title)
-df <- df[!duplicated(df$ten_title), ]
+# df <- df[!duplicated(df$ten_title), ]
 
 #remove irrelevant words
 df$ten_title <- gsub("\\d+", " ", df$ten_title) 
@@ -45,37 +77,36 @@ df$ten_title <- gsub("[[:punct:]]", " ", df$ten_title)
 df$ten_title <- sapply(df$ten_title, tolower)
 df$ten_title <- str_squish(df$ten_title)
 
-#descr <- Corpus(DirSource('C:/Users/Shaibani/Desktop/RN/cpvloc/cpv_test'))
-descr <- VCorpus(VectorSource(df$ten_title))
-
-descr <- tm_map(descr, removePunctuation)
-#descr <- tm_map(descr, removeWords, stopwords("indonesia"))
-descr <- tm_map(descr, stripWhitespace)
-descr <- tm_map(descr, stemDocument)
-descr <- tm_map(descr, PlainTextDocument)
-
-#single words
-dtm <- DocumentTermMatrix(descr)
-dtm2 <- as.matrix(dtm)
-wordfreq <- colSums(dtm2)
-wordfreq <- sort(wordfreq, decreasing=TRUE)
-head(wordfreq, n=400)
-
-bigr <- tokenize_ngrams(df$ten_title, n = 2)
-tri <- tokenize_ngrams(df$ten_title, n = 3)
-
-descr2 <- data.frame(unlist(tri), stringsAsFactors = F)
-setDT(descr2, keep.rownames = T)
-setnames(descr2, 1, "rownr")
-setnames(descr2, 2, "term")
-
-descr2$nr_occ <- 1
-
-freq_ug <- descr2 %>% 
-  group_by(term) %>%
-  summarise(frequg = sum(nr_occ))
-
-descr3 <- arrange(freq_ug, desc(frequg))
+# descr <- VCorpus(VectorSource(df$ten_title))
+# 
+# descr <- tm_map(descr, removePunctuation)
+# #descr <- tm_map(descr, removeWords, stopwords("indonesia"))
+# descr <- tm_map(descr, stripWhitespace)
+# descr <- tm_map(descr, stemDocument)
+# descr <- tm_map(descr, PlainTextDocument)
+# 
+# #single words
+# dtm <- DocumentTermMatrix(descr)
+# dtm2 <- as.matrix(dtm)
+# wordfreq <- colSums(dtm2)
+# wordfreq <- sort(wordfreq, decreasing=TRUE)
+# head(wordfreq, n=400)
+# 
+# bigr <- tokenize_ngrams(df$ten_title, n = 2)
+# tri <- tokenize_ngrams(df$ten_title, n = 3)
+# 
+# descr2 <- data.frame(unlist(tri), stringsAsFactors = F)
+# setDT(descr2, keep.rownames = T)
+# setnames(descr2, 1, "rownr")
+# setnames(descr2, 2, "term")
+# 
+# descr2$nr_occ <- 1
+# 
+# freq_ug <- descr2 %>% 
+#   group_by(term) %>%
+#   summarise(frequg = sum(nr_occ))
+# 
+# descr3 <- arrange(freq_ug, desc(frequg))
 
 df$ten_title <- as.character(df$ten_title)
 df$cpv_code <- NA
@@ -176,5 +207,7 @@ df$check <- ifelse(grepl(paste(health$health_term, collapse = "|"), df$ten_title
 df$cpv_code <- ifelse(df$check==1 & is.na(df$cpv_code),336000006, df$cpv_code)
 df$cpv_code <- ifelse(df$cpv_code==983900003, NA, df$cpv_code)
 
-path_save <- paste0(country_folder,"dfid_indonesia_cricpv200708.csv")
-write.csv(df, path_save)
+df <- df %>% select(c('ten_id','ten_title_orig','cpv_code'))
+
+data.table::fwrite(df,"ID_cpv_R.csv",
+                   quote = TRUE, sep = "," )

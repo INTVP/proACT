@@ -32,8 +32,8 @@ class Settings:
     # project level parameters:
     json_id_field_name = ['id']
     csv_id_field_name = ['tender_id']
-    chunk_size = 2000
-    db_operation_size = 2000
+    chunk_size = 1000
+    db_operation_size = 1000
     log_level = "INFO"
     date_format_str = "%Y.%m.%d"
     json_reader_buffer_size = 20000000

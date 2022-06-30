@@ -6,7 +6,6 @@ local country "`0'"
 4) Structures/prepares other control variables used for risk regressions
 */
 ********************************************************************************
-
 *Data
 import delimited using  "${utility_data}/country/`country'/starting_data/`country'_data.csv", encoding(UTF-8) clear
 ********************************************************************************

@@ -6,7 +6,7 @@ services:
     networks:
       - rf-network
     ports:
-      - 5455:5432
+      - 5456:5432
     environment:
       - POSTGRES_DB=digiwhist_rf
       - POSTGRES_PASSWORD=digiwhist

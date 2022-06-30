@@ -12,46 +12,46 @@ buyers_loc_2 - comes from a manual location search*/
 ********************************************************************************
 
 *Data
-use $country_folder/ID_wip.dta, clear
+use "${country_folder}/`country'_wip.dta", clear
 ********************************************************************************
-
 *Merging with Dataset
 
 *Extracting buyer names to find locations
 decode(anb_name), gen(anb_name_str)
 
-merge m:1  anb_name_str using $utility_data/country/ID/buyer_loc_1.dta, gen(_m)
-br anb_name_str buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code buyer_loc_5 if _m==3
+cap drop _m
+merge m:1  anb_name_str using "${utility_data}/country/ID/buyer_loc_1.dta", gen(_m)
+// br anb_name_str buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code buyer_loc_5 if _m==3
 drop if _m==2
 drop _m
 
 foreach var of varlist buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code {
 rename `var' `var'_1
 }
-merge m:1  anb_name_str using $utility_data/country/ID/buyers_final2.dta, gen(_m)
+merge m:1  anb_name_str using "${utility_data}/country/ID/buyers_final2.dta", gen(_m)
 drop _m country
-br anb_name_str buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code country if _m==3
+// br anb_name_str buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code country if _m==3
 
 foreach var of varlist buyer_name_api_en buyer_loc_4 buyer_loc_3 buyer_loc_2 buyer_loc_1 buyer_postal_code {
 rename `var' `var'_2
 }
 
-tab buyer_loc_1_1
-tab buyer_loc_1_2
+// tab buyer_loc_1_1
+// tab buyer_loc_1_2
 gen buyer_loc_1 = ""
 replace buyer_loc_1 = buyer_loc_1_1
 replace buyer_loc_1 = buyer_loc_1_2 if missing(buyer_loc_1)
 label var buyer_loc_1 "Province"
 
-tab buyer_loc_2_1
-tab buyer_loc_2_2
+// tab buyer_loc_2_1
+// tab buyer_loc_2_2
 replace buyer_loc_2_2 = subinstr(buyer_loc_2_2,",","",.)
 gen buyer_loc_2 = ""
 replace buyer_loc_2 = buyer_loc_2_1
 replace buyer_loc_2 = buyer_loc_2_2 if missing(buyer_loc_2)
 
-tab buyer_loc_3_1
-tab buyer_loc_3_2
+// tab buyer_loc_3_1
+// tab buyer_loc_3_2
 gen buyer_loc_3 = ""
 replace buyer_loc_3 = buyer_loc_3_1
 replace buyer_loc_3 = buyer_loc_3_2 if missing(buyer_loc_3)
@@ -76,19 +76,18 @@ rename anb_name_str buyer_name
 replace buyer_name=proper(buyer_name)
 replace buyer_name_api_en=proper(buyer_name_api_en)
 
-br *buyer* if !missing(buyer_name)
+// br *buyer* if !missing(buyer_name)
 ********************************************************************************
-
 *Main location variable
 
-br  buyer_name  buyer_loc_1 buyer_loc_2 buyer_loc_3 buyer_loc_4 buyer_loc_5 buyer_postal_code
-tab buyer_loc_1, m //province - Level 1
-tab buyer_loc_2, m // Regency/City - Level 2
-tab buyer_loc_3, m //District - Level 3
-tab buyer_loc_4, m //Village/subDistrict - Level 4
-tab buyer_loc_5, m
+// br  buyer_name  buyer_loc_1 buyer_loc_2 buyer_loc_3 buyer_loc_4 buyer_loc_5 buyer_postal_code
+// tab buyer_loc_1, m //province - Level 1
+// tab buyer_loc_2, m // Regency/City - Level 2
+// tab buyer_loc_3, m //District - Level 3
+// tab buyer_loc_4, m //Village/subDistrict - Level 4
+// tab buyer_loc_5, m
 
-br *loc* if missing(buyer_loc_1)
+// br *loc* if missing(buyer_loc_1)
 
 gen buyer_province=buyer_loc_1
 replace buyer_province="Special Region of Yogyakarta " if buyer_province=="DAERAH ISTIMEWA YOGYAKART"
@@ -135,8 +134,8 @@ replace buyer_province="East Nusa Tenggara" if buyer_province=="East Nusa Tengga
 replace buyer_province="Special Capital Region of Jakarta" if buyer_province=="Jakarta"
 replace buyer_province="Special Region of Yogyakarta" if buyer_province=="Special Region of Yogyakarta" | buyer_province=="Special Region of Yogyakarta "
 
-tab buyer_province, m
-unique buyer_province
+// tab buyer_province, m
+// unique buyer_province
 
 
 gen x = "ID" if !missing(buyer_province)
@@ -190,7 +189,7 @@ replace z="9" if buyer_province=="Papua"
 replace z="A" if buyer_province=="East Nusa Tenggara"
 replace z="B" if buyer_province=="Gorontalo"
 
-tab  buyer_province if missing(z) & !missing(buyer_province) //good
+// tab  buyer_province if missing(z) & !missing(buyer_province) //good
 /*
 *Some provinces have more than 55 cities - so a one code system will not work
 gen buyer_city=buyer_loc_2
@@ -218,8 +217,17 @@ drop x-xx
 
 gen buyer_geocodes=x+y+z
 drop x z y
+
+preserve
+	keep buyer_geocodes buyer_province
+	rename buyer_geocodes geocodes
+	rename buyer_province region
+	duplicates drop 
+	drop if missing(geocodes)
+	export delimited "${utility_data}/country/`country'/`country'_region_labels.csv", replace
+restore
 ********************************************************************************
 
-save $country_folder/ID_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

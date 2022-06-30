@@ -410,9 +410,13 @@ drop buyer_type2
 replace anb_dept= ustrtitle(anb_dept)
 replace anb_dept="Caaguazú" if anb_dept=="Caaguazu"
 replace anb_dept="Canindeyú" if anb_dept=="Canindeyu"
+replace anb_dept="Neembucu" if anb_dept=="Ñeembucú"
 replace anb_city= ustrtitle(anb_city)
 *Keep the buyer dept only for the NUTS-like code because cities are too detailed
 
+cap drop buyer_geocodes*
+cap drop x
+cap drop y
 gen x = "PY" if !missing(anb_dept)
 *Generating a new grouping for regions
 local temp ""Alto Paraguay" "Boquerón" "Presidente Hayes" "Concepción" "Amambay" "San Pedro" "Canindeyú" "Alto Paraná" "Caaguazú" "Caazapá" "Central" "Cordillera" "Guairá" "Itapúa" "Misiones" "Neembucu" "Paraguarí""

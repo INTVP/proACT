@@ -1,7 +1,7 @@
-cap drop `1'_clean
+*cap drop `1'_clean
 
 *Transliteration and variable cleaning
-gen `1'_clean = `1'  // replace variable names
+*gen `1'_clean = `1'  // replace variable names
 replace `1'_clean=lower(`1'_clean)
 
 *****************************
@@ -104,7 +104,7 @@ forval s =1/`n_temp'{
 	}
 
 *Replace other special character with empty 
-charlist `1'_clean 
+*charlist `1'_clean 
 *di "`r(chars)'"
 *di "`r(ascii)'"
 *br buyer_name `1'_clean if  regexm(`1'_clean,"`: word 65 of `r(chars)''")==1 
@@ -115,7 +115,7 @@ foreach v of local stop {
  replace `1'_clean = subinstr(`1'_clean, "`v'", "",.)
 }
 *Replace other special character with empty 
-charlist `1'_clean 
+*charlist `1'_clean 
 local stop " "’" "~" "!" "*" "<" ">" "[" "]" "=" "&" "(" ")" "?" "#" "^" "%"  "," "-" "." ":" ";" "@" "_" "„" "´" "ʼ" "|" "`" "
 foreach v of local stop {
  replace `1'_clean = subinstr(`1'_clean, "`v'", " ",.)

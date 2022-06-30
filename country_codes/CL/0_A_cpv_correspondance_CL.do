@@ -1,23 +1,16 @@
-*Macros
-local dir : pwd
-local root = substr("`dir'",1,strlen("`dir'")-17)
-global country_folder "`dir'"
-global utility_codes "`root'\utility_codes"
-global utility_data "`root'\utility_data"
-macro list
+local country "`0'"
 ********************************************************************************
 /*This script is early stage script that translates the UNSPC codes to CPV*/
 ********************************************************************************
-
 *Data
-use $utility_data/country/CL/starting_data/dfid2_cl_191217.dta, clear
+import delimited using "${utility_data}/country/`country'//starting_data/dfid2_cl_191217.csv", encoding(UTF-8)  varnames(1) clear 
 ********************************************************************************
 
 *Convert ca_item_class_id to string var
 tostring ca_item_class_id, gen(product_str)
 
 ********************************************************************************
-desc  product_str
+// desc  product_str
 replace product_str = strtrim(product_str)
 replace product_str = stritrim(product_str)
 replace product_str = strltrim(product_str)
@@ -170,14 +163,14 @@ label var cpv_div_descr "CPV division description"
 ********************************************************************************
 
 *Only 2 observates codes 79713000, 79713000 - coming from an older unspsc version
- replace cpv_div = "99"  if   !missing(tender_unspsc_original) & missing(cpv_div)
+replace cpv_div = "99"  if   !missing(tender_unspsc_original) & missing(cpv_div)
 
  *Check the rest
-br  tender_unspsc_original cpv_div if !missing(tender_unspsc_original)
-tab cpv_div, m
+// br  tender_unspsc_original cpv_div if !missing(tender_unspsc_original)
+// tab cpv_div, m
 
 ********************************************************************************
 
-save $country_folder/CL_wip.dta, replace
+save "${country_folder}/`country'_wip.dta", replace
 ********************************************************************************
 *END

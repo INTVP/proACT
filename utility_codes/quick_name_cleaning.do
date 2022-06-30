@@ -15,7 +15,7 @@ replace `1'_clean = subinstr(`1'_clean, `"\"', " ",.)
 replace `1'_clean = subinstr(`1'_clean, `"_"', " ",.)	
 
 ereplace `1'_clean = sieve(`1'_clean), omit(0123456789)
-replace `1'_clean=lower(`1'_clean) 
+replace `1'_clean=ustrlower(`1'_clean) 
 
 *Removing lone letters
 *br `1'_clean if regex(`1'_clean," [a-z] ")
@@ -37,5 +37,6 @@ replace `1'_clean = subinstr(`1'_clean, "  ", " ",.)
 }
 replace `1'_clean = stritrim(`1'_clean)
 replace `1'_clean = strtrim(`1'_clean)
-unique  `1'_clean
+
+*unique  `1'_clean
 
